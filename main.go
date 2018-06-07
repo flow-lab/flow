@@ -13,10 +13,6 @@ import (
 )
 
 func main() {
-	var profile string
-	var tableName string
-	var indexName string
-
 	app := cli.NewApp()
 
 	app.Commands = []cli.Command{
@@ -27,22 +23,20 @@ func main() {
 					Name: "purge",
 					Flags: []cli.Flag{
 						cli.StringFlag{
-							Name:        "profile",
-							Value:       "",
-							Destination: &profile,
+							Name:  "profile",
+							Value: "",
 						},
 						cli.StringFlag{
-							Name:        "table-name",
-							Value:       "",
-							Destination: &tableName,
+							Name:  "table-name",
+							Value: "",
 						},
-						cli.StringFlag{
-							Name:        "index-name",
-							Value:       "id",
-							Destination: &indexName,
+						cli.StringSliceFlag{
+							Name: "index",
 						},
 					},
 					Action: func(c *cli.Context) error {
+						profile := c.String("profile")
+						tableName := c.String("table-name")
 						sess := session.Must(session.NewSessionWithOptions(session.Options{
 							AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
 							SharedConfigState:       session.SharedConfigEnable,
@@ -59,9 +53,13 @@ func main() {
 						}
 						err := ddbc.ScanPages(&params, func(page *dynamodb.ScanOutput, lastPage bool) bool {
 							for _, element := range page.Items {
-								id := element["eventId"]
-								eventDate := element["eventDate"]
-								key := map[string]*dynamodb.AttributeValue{"eventId": id, "eventDate": eventDate}
+								key := map[string]*dynamodb.AttributeValue{}
+								indexes := c.StringSlice("index")
+								for _, index := range indexes {
+									key[index] = element[index]
+								}
+
+								fmt.Printf("delete: %v", key)
 								deleteItemParam := dynamodb.DeleteItemInput{
 									TableName: &tableName,
 									Key:       key,
