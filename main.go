@@ -53,23 +53,31 @@ func main() {
 							Region: aws.String(endpoints.EuWest1RegionID),
 						})
 
+						counter := 0
 						params := dynamodb.ScanInput{
 							TableName: &tableName,
 						}
 						err := ddbc.ScanPages(&params, func(page *dynamodb.ScanOutput, lastPage bool) bool {
 							for _, element := range page.Items {
+								id := element["eventId"]
+								eventDate := element["eventDate"]
+								key := map[string]*dynamodb.AttributeValue{"eventId": id, "eventDate": eventDate}
 								deleteItemParam := dynamodb.DeleteItemInput{
 									TableName: &tableName,
-									Key:       element,
+									Key:       key,
 								}
 								_, err := ddbc.DeleteItem(&deleteItemParam)
 								if err != nil {
-									fmt.Errorf("%e", err)
+									fmt.Printf("%v", err)
+								} else {
+									counter += 1
 								}
 							}
 
 							return lastPage == false
 						})
+
+						fmt.Printf("Deleted %d", counter)
 
 						if err != nil {
 							return err
