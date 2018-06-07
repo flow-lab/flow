@@ -10,6 +10,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
+	"github.com/aws/aws-sdk-go/service/sqs"
+	"strings"
 )
 
 func main() {
@@ -79,6 +81,60 @@ func main() {
 
 						if err != nil {
 							return err
+						}
+
+						return nil
+					},
+				},
+			},
+		},
+
+		{
+			Name: "sqs",
+			Subcommands: []cli.Command{
+				{
+					Name: "purge",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:  "profile",
+							Value: "",
+						},
+						cli.StringFlag{
+							Name:  "queue-name",
+							Value: "",
+						},
+					},
+					Action: func(c *cli.Context) error {
+						profile := c.String("profile")
+						queueName := c.String("queue-name")
+						sess := session.Must(session.NewSessionWithOptions(session.Options{
+							AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
+							SharedConfigState:       session.SharedConfigEnable,
+							Profile:                 profile,
+						}))
+
+						sqsc := sqs.New(sess, &aws.Config{
+							Region: aws.String(endpoints.EuWest1RegionID),
+						})
+
+						params := sqs.ListQueuesInput{
+						}
+						resp, err := sqsc.ListQueues(&params)
+						if err != nil {
+							return err
+						}
+
+						for _, elem := range resp.QueueUrls {
+							if strings.Contains(*elem, queueName) {
+								purgeQueue := sqs.PurgeQueueInput{
+									QueueUrl: elem,
+								}
+								out, err := sqsc.PurgeQueue(&purgeQueue)
+								if err != nil {
+									return err
+								}
+								fmt.Printf("Purged %v", out)
+							}
 						}
 
 						return nil
