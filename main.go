@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"strings"
+	"strconv"
 )
 
 func main() {
@@ -61,7 +62,7 @@ func main() {
 									key[index] = element[index]
 								}
 
-								fmt.Printf("delete: %v", key)
+								fmt.Print(".")
 								deleteItemParam := dynamodb.DeleteItemInput{
 									TableName: &tableName,
 									Key:       key,
@@ -78,6 +79,69 @@ func main() {
 						})
 
 						fmt.Printf("Deleted %d", counter)
+
+						if err != nil {
+							return err
+						}
+
+						return nil
+					},
+				},
+
+				{
+					Name: "capacity",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:  "profile",
+							Value: "",
+						},
+						cli.StringFlag{
+							Name:  "table-name",
+							Value: "",
+						},
+						cli.StringFlag{
+							Name:  "read",
+							Value: "",
+						},
+						cli.StringFlag{
+							Name:  "write",
+							Value: "",
+						},
+					},
+					Action: func(c *cli.Context) error {
+						profile := c.String("profile")
+						tableName := c.String("table-name")
+
+						read, err := strconv.ParseInt(c.String("read"), 10, 0)
+						if err != nil {
+							return err
+						}
+
+						write, err := strconv.ParseInt(c.String("write"), 10, 0)
+						if err != nil {
+							return err
+						}
+
+						sess := session.Must(session.NewSessionWithOptions(session.Options{
+							AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
+							SharedConfigState:       session.SharedConfigEnable,
+							Profile:                 profile,
+						}))
+
+						ddbc := dynamodb.New(sess, &aws.Config{
+							Region: aws.String(endpoints.EuWest1RegionID),
+						})
+
+						input := &dynamodb.UpdateTableInput{
+							ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
+								ReadCapacityUnits:  aws.Int64(read),
+								WriteCapacityUnits: aws.Int64(write),
+							},
+							TableName: aws.String(tableName),
+						}
+
+						update, err := ddbc.UpdateTable(input)
+						fmt.Printf("updated %v", update)
 
 						if err != nil {
 							return err
@@ -129,11 +193,11 @@ func main() {
 								purgeQueue := sqs.PurgeQueueInput{
 									QueueUrl: elem,
 								}
-								out, err := sqsc.PurgeQueue(&purgeQueue)
+								_, err := sqsc.PurgeQueue(&purgeQueue)
 								if err != nil {
 									return err
 								}
-								fmt.Printf("Purged %v", out)
+								fmt.Printf("Purged %v", queueName)
 							}
 						}
 
