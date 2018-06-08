@@ -208,6 +208,63 @@ func main() {
 						return nil
 					},
 				},
+				{
+					Name: "describe",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:  "profile",
+							Value: "",
+						},
+						cli.StringFlag{
+							Name:  "queue-name",
+							Value: "",
+						},
+						cli.StringSliceFlag{
+							Name: "attribute-names",
+						},
+					},
+					Action: func(c *cli.Context) error {
+						profile := c.String("profile")
+						queueName := c.String("queue-name")
+						var attributeNames []*string
+						for _, elem := range c.StringSlice("attribute-names") {
+							attributeNames = append(attributeNames, &elem)
+						}
+
+						sess := session.Must(session.NewSessionWithOptions(session.Options{
+							AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
+							SharedConfigState:       session.SharedConfigEnable,
+							Profile:                 profile,
+						}))
+
+						sqsc := sqs.New(sess, &aws.Config{
+							Region: aws.String(endpoints.EuWest1RegionID),
+						})
+
+						params := sqs.ListQueuesInput{
+						}
+						resp, err := sqsc.ListQueues(&params)
+						if err != nil {
+							return err
+						}
+
+						for _, elem := range resp.QueueUrls {
+							if strings.Contains(*elem, queueName) {
+								purgeQueue := sqs.GetQueueAttributesInput{
+									QueueUrl:       elem,
+									AttributeNames: attributeNames,
+								}
+								output, err := sqsc.GetQueueAttributes(&purgeQueue)
+								if err != nil {
+									return err
+								}
+								fmt.Printf("%v", output.String())
+							}
+						}
+
+						return nil
+					},
+				},
 			},
 		},
 	}
