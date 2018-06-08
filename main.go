@@ -50,31 +50,31 @@ func main() {
 							Region: aws.String(endpoints.EuWest1RegionID),
 						})
 
+						purge := func(c *cli.Context, element map[string]*dynamodb.AttributeValue, tableName string, ddbc *dynamodb.DynamoDB) {
+							key := map[string]*dynamodb.AttributeValue{}
+							indexes := c.StringSlice("index")
+							for _, index := range indexes {
+								key[index] = element[index]
+							}
+							fmt.Print(".")
+							deleteItemParam := dynamodb.DeleteItemInput{
+								TableName: &tableName,
+								Key:       key,
+							}
+							_, err := ddbc.DeleteItem(&deleteItemParam)
+							if err != nil {
+								fmt.Printf("%v", err)
+							}
+						}
+
 						counter := 0
 						params := dynamodb.ScanInput{
 							TableName: &tableName,
 						}
 						err := ddbc.ScanPages(&params, func(page *dynamodb.ScanOutput, lastPage bool) bool {
 							for _, element := range page.Items {
-								key := map[string]*dynamodb.AttributeValue{}
-								indexes := c.StringSlice("index")
-								for _, index := range indexes {
-									key[index] = element[index]
-								}
-
-								fmt.Print(".")
-								deleteItemParam := dynamodb.DeleteItemInput{
-									TableName: &tableName,
-									Key:       key,
-								}
-								_, err := ddbc.DeleteItem(&deleteItemParam)
-								if err != nil {
-									fmt.Printf("%v", err)
-								} else {
-									counter += 1
-								}
+								go purge(c, element, tableName, ddbc)
 							}
-
 							return lastPage == false
 						})
 
