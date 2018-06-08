@@ -80,9 +80,10 @@ func main() {
 						params := dynamodb.ScanInput{
 							TableName: &tableName,
 						}
-						res, err := ddbc.Scan(&params)
-						purge(c, res.Items, tableName, ddbc)
-
+						err := ddbc.ScanPages(&params, func(output *dynamodb.ScanOutput, b bool) bool {
+							purge(c, output.Items, tableName, ddbc)
+							return b == false
+						})
 						if err != nil {
 							return err
 						}
