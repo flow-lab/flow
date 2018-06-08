@@ -221,6 +221,11 @@ func main() {
 						},
 						cli.StringSliceFlag{
 							Name: "attribute-names",
+							Value: func() *cli.StringSlice {
+								ss := &cli.StringSlice{}
+								ss.Set("All")
+								return ss
+							}(),
 						},
 					},
 					Action: func(c *cli.Context) error {
