@@ -27,6 +27,7 @@ func main() {
 			Subcommands: []cli.Command{
 				{
 					Name: "purge",
+					Usage: "fast purge dynamodb using scan operation",
 					Flags: []cli.Flag{
 						cli.StringFlag{
 							Name:  "profile",
@@ -96,6 +97,7 @@ func main() {
 
 				{
 					Name: "capacity",
+					Usage: "update read and write capacity",
 					Flags: []cli.Flag{
 						cli.StringFlag{
 							Name:  "profile",
@@ -163,6 +165,7 @@ func main() {
 			Subcommands: []cli.Command{
 				{
 					Name: "purge",
+					Usage: "purge all messages",
 					Flags: []cli.Flag{
 						cli.StringFlag{
 							Name:  "profile",
@@ -211,6 +214,7 @@ func main() {
 				},
 				{
 					Name: "describe",
+					Usage: "get all attributes",
 					Flags: []cli.Flag{
 						cli.StringFlag{
 							Name:  "profile",
@@ -279,6 +283,7 @@ func main() {
 			Subcommands: []cli.Command{
 				{
 					Name: "publish",
+					Usage: "publish many messages",
 					Flags: []cli.Flag{
 						cli.StringFlag{
 							Name:  "profile",
