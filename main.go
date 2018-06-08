@@ -101,11 +101,11 @@ func main() {
 						},
 						cli.StringFlag{
 							Name:  "read",
-							Value: "",
+							Value: "10",
 						},
 						cli.StringFlag{
 							Name:  "write",
-							Value: "",
+							Value: "10",
 						},
 					},
 					Action: func(c *cli.Context) error {
