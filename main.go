@@ -14,6 +14,7 @@ import (
 	"strings"
 	"strconv"
 	"sync"
+	"github.com/aws/aws-sdk-go/service/sns"
 )
 
 func main() {
@@ -156,7 +157,6 @@ func main() {
 				},
 			},
 		},
-
 		{
 			Name: "sqs",
 			Subcommands: []cli.Command{
@@ -264,6 +264,70 @@ func main() {
 									return err
 								}
 								fmt.Printf("%v", output.String())
+							}
+						}
+
+						return nil
+					},
+				},
+			},
+		},
+
+		{
+			Name: "sns",
+			Subcommands: []cli.Command{
+				{
+					Name: "publish",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:  "profile",
+							Value: "",
+						},
+						cli.StringFlag{
+							Name:  "topic-name",
+							Value: "",
+						},
+						cli.StringFlag{
+							Name: "message",
+						},
+						cli.StringFlag{
+							Name:  "times",
+							Value: "1",
+						},
+					},
+					Action: func(c *cli.Context) error {
+						profile := c.String("profile")
+						topicName := c.String("topic-name")
+						message := c.String("message")
+						times, err := strconv.Atoi(c.String("times"))
+						if err != nil {
+							return err
+						}
+						sess := session.Must(session.NewSessionWithOptions(session.Options{
+							AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
+							SharedConfigState:       session.SharedConfigEnable,
+							Profile:                 profile,
+						}))
+
+						sqsc := sns.New(sess, &aws.Config{
+							Region: aws.String(endpoints.EuWest1RegionID),
+						})
+
+						listTopicsParams := sns.ListTopicsInput{}
+						out, err := sqsc.ListTopics(&listTopicsParams)
+						for _, topic := range out.Topics {
+							if strings.Contains(*topic.TopicArn, topicName) {
+								for i := 0; i < times; i++ {
+									params := sns.PublishInput{
+										Message:  &message,
+										TopicArn: topic.TopicArn,
+									}
+									_, err := sqsc.Publish(&params)
+									if err != nil {
+										return err
+									}
+									fmt.Print(".")
+								}
 							}
 						}
 
