@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"strings"
 	"strconv"
+	"sync"
 )
 
 func main() {
@@ -50,35 +51,37 @@ func main() {
 							Region: aws.String(endpoints.EuWest1RegionID),
 						})
 
-						purge := func(c *cli.Context, element map[string]*dynamodb.AttributeValue, tableName string, ddbc *dynamodb.DynamoDB) {
-							key := map[string]*dynamodb.AttributeValue{}
-							indexes := c.StringSlice("index")
-							for _, index := range indexes {
-								key[index] = element[index]
+						purge := func(c *cli.Context, elements []map[string]*dynamodb.AttributeValue, tableName string, ddbc *dynamodb.DynamoDB) {
+							var wg sync.WaitGroup
+							wg.Add(len(elements))
+							for _, element := range elements {
+								key := map[string]*dynamodb.AttributeValue{}
+								indexes := c.StringSlice("index")
+								for _, index := range indexes {
+									key[index] = element[index]
+								}
+								go func() {
+									fmt.Print(".")
+									defer wg.Done()
+									deleteItemParam := dynamodb.DeleteItemInput{
+										TableName: &tableName,
+										Key:       key,
+									}
+									_, err := ddbc.DeleteItem(&deleteItemParam)
+									if err != nil {
+										fmt.Printf("%v", err)
+									}
+								}()
 							}
-							fmt.Print(".")
-							deleteItemParam := dynamodb.DeleteItemInput{
-								TableName: &tableName,
-								Key:       key,
-							}
-							_, err := ddbc.DeleteItem(&deleteItemParam)
-							if err != nil {
-								fmt.Printf("%v", err)
-							}
+
+							wg.Wait()
 						}
 
-						counter := 0
 						params := dynamodb.ScanInput{
 							TableName: &tableName,
 						}
-						err := ddbc.ScanPages(&params, func(page *dynamodb.ScanOutput, lastPage bool) bool {
-							for _, element := range page.Items {
-								go purge(c, element, tableName, ddbc)
-							}
-							return lastPage == false
-						})
-
-						fmt.Printf("Deleted %d", counter)
+						res, err := ddbc.Scan(&params)
+						purge(c, res.Items, tableName, ddbc)
 
 						if err != nil {
 							return err
