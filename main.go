@@ -19,6 +19,7 @@ import (
 
 func main() {
 	app := cli.NewApp()
+	app.Name = "development tooling for AWS"
 
 	app.Commands = []cli.Command{
 		{
