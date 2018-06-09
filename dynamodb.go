@@ -46,41 +46,46 @@ var dynamodbCommand = func() cli.Command {
 					})
 
 					var wg sync.WaitGroup
-					purge := func(c *cli.Context, elements []map[string]*dynamodb.AttributeValue, tableName string, ddbc *dynamodb.DynamoDB) {
-						wg.Add(1)
-						go func() {
-							defer wg.Done()
-							for _, element := range elements {
-								key := map[string]*dynamodb.AttributeValue{}
-								keys := c.StringSlice("key")
-								for _, index := range keys {
-									key[index] = element[index]
-								}
-
-								deleteItemParam := dynamodb.DeleteItemInput{
-									TableName: &tableName,
-									Key:       key,
-								}
-								_, err := ddbc.DeleteItem(&deleteItemParam)
-								if err != nil {
-									fmt.Printf("%v", err)
-								}
+					purge := func(items []map[string]*dynamodb.AttributeValue, pageNr int) {
+						defer wg.Done()
+						for _, element := range items {
+							key := map[string]*dynamodb.AttributeValue{}
+							keys := c.StringSlice("key")
+							for _, myKey := range keys {
+								key[myKey] = element[myKey]
 							}
-						}()
+
+							deleteItemParam := dynamodb.DeleteItemInput{
+								TableName: &tableName,
+								Key:       key,
+							}
+							_, err := ddbc.DeleteItem(&deleteItemParam)
+							if err != nil {
+								panic(err)
+							}
+						}
+						fmt.Printf("%d deleted", len(items))
 					}
-					wg.Wait()
-					fmt.Println()
 
 					params := dynamodb.ScanInput{
 						TableName: &tableName,
 					}
+					pageNr := 0
 					err := ddbc.ScanPages(&params, func(output *dynamodb.ScanOutput, b bool) bool {
-						purge(c, output.Items, tableName, ddbc)
+						targetMap := make([]map[string]*dynamodb.AttributeValue, len(output.Items))
+						for key, value := range output.Items {
+							targetMap[key] = value
+						}
+						wg.Add(1)
+						go purge(output.Items, pageNr)
+						pageNr += 1
 						return b == false
 					})
 					if err != nil {
 						return err
 					}
+
+					wg.Wait()
 
 					return nil
 				},
