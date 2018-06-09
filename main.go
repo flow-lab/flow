@@ -15,6 +15,7 @@ func main() {
 		dynamodbCommand(),
 		sqsCommand(),
 		snsCommand(),
+		cloudwatchCommand(),
 		cloudwatchlogsCommand(),
 	}
 
