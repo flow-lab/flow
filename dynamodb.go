@@ -29,7 +29,7 @@ var dynamodbCommand = func() cli.Command {
 						Value: "",
 					},
 					cli.StringSliceFlag{
-						Name: "index",
+						Name: "key",
 					},
 				},
 				Action: func(c *cli.Context) error {
@@ -45,18 +45,18 @@ var dynamodbCommand = func() cli.Command {
 						Region: aws.String(endpoints.EuWest1RegionID),
 					})
 
+					var wg sync.WaitGroup
 					purge := func(c *cli.Context, elements []map[string]*dynamodb.AttributeValue, tableName string, ddbc *dynamodb.DynamoDB) {
-						var wg sync.WaitGroup
-						wg.Add(len(elements))
-						for _, element := range elements {
-							key := map[string]*dynamodb.AttributeValue{}
-							indexes := c.StringSlice("index")
-							for _, index := range indexes {
-								key[index] = element[index]
-							}
-							go func() {
-								fmt.Print(".")
-								defer wg.Done()
+						wg.Add(1)
+						go func() {
+							defer wg.Done()
+							for _, element := range elements {
+								key := map[string]*dynamodb.AttributeValue{}
+								keys := c.StringSlice("key")
+								for _, index := range keys {
+									key[index] = element[index]
+								}
+
 								deleteItemParam := dynamodb.DeleteItemInput{
 									TableName: &tableName,
 									Key:       key,
@@ -65,11 +65,11 @@ var dynamodbCommand = func() cli.Command {
 								if err != nil {
 									fmt.Printf("%v", err)
 								}
-							}()
-						}
-
-						wg.Wait()
+							}
+						}()
 					}
+					wg.Wait()
+					fmt.Println()
 
 					params := dynamodb.ScanInput{
 						TableName: &tableName,
