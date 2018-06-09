@@ -16,7 +16,7 @@ var sqsCommand = func() cli.Command {
 		Name: "sqs",
 		Subcommands: []cli.Command{
 			{
-				Name:  "purge, p",
+				Name:  "purge",
 				Usage: "purge all messages",
 				Flags: []cli.Flag{
 					cli.StringFlag{
