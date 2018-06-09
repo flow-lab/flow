@@ -17,6 +17,7 @@ func main() {
 		snsCommand(),
 		cloudwatchCommand(),
 		cloudwatchlogsCommand(),
+		ssmCommand(),
 	}
 
 	app.Action = func(c *cli.Context) error {
