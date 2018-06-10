@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 )
 
 var dynamodbCommand = func() cli.Command {
@@ -48,6 +49,7 @@ var dynamodbCommand = func() cli.Command {
 					var wg sync.WaitGroup
 					purge := func(items []map[string]*dynamodb.AttributeValue, pageNr int) {
 						defer wg.Done()
+
 						for _, element := range items {
 							key := map[string]*dynamodb.AttributeValue{}
 							keys := c.StringSlice("key")
@@ -59,9 +61,29 @@ var dynamodbCommand = func() cli.Command {
 								TableName: &tableName,
 								Key:       key,
 							}
-							_, err := ddbc.DeleteItem(&deleteItemParam)
-							if err != nil {
-								panic(err)
+							for {
+								_, err := ddbc.DeleteItem(&deleteItemParam)
+								if err != nil {
+									if aerr, ok := err.(awserr.Error); ok {
+										switch aerr.Code() {
+										case dynamodb.ErrCodeConditionalCheckFailedException:
+											fmt.Println(dynamodb.ErrCodeConditionalCheckFailedException, aerr.Error())
+										case dynamodb.ErrCodeProvisionedThroughputExceededException:
+											fmt.Println(dynamodb.ErrCodeProvisionedThroughputExceededException, aerr.Error())
+										case dynamodb.ErrCodeResourceNotFoundException:
+											fmt.Println(dynamodb.ErrCodeResourceNotFoundException, aerr.Error())
+										case dynamodb.ErrCodeItemCollectionSizeLimitExceededException:
+											fmt.Println(dynamodb.ErrCodeItemCollectionSizeLimitExceededException, aerr.Error())
+										case dynamodb.ErrCodeInternalServerError:
+											fmt.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
+										default:
+											fmt.Println(aerr.Error())
+										}
+									} else {
+										fmt.Println(err.Error())
+									}
+									fmt.Println("Retry DeleteItem...")
+								}
 							}
 						}
 						fmt.Printf("%d deleted", len(items))
