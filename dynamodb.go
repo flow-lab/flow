@@ -83,6 +83,8 @@ var dynamodbCommand = func() cli.Command {
 										fmt.Println(err.Error())
 									}
 									fmt.Println("Retry DeleteItem...")
+								} else {
+									break
 								}
 							}
 						}
