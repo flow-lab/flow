@@ -135,10 +135,14 @@ var dynamodbCommand = func() cli.Command {
 						Name:  "write",
 						Value: "10",
 					},
+					cli.StringSliceFlag{
+						Name: "global-secondary-index",
+					},
 				},
 				Action: func(c *cli.Context) error {
 					profile := c.String("profile")
 					tableName := c.String("table-name")
+					gsis := c.StringSlice("global-secondary-index")
 
 					read, err := strconv.ParseInt(c.String("read"), 10, 0)
 					if err != nil {
@@ -160,12 +164,38 @@ var dynamodbCommand = func() cli.Command {
 						Region: aws.String(endpoints.EuWest1RegionID),
 					})
 
-					input := &dynamodb.UpdateTableInput{
-						ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
-							ReadCapacityUnits:  aws.Int64(read),
-							WriteCapacityUnits: aws.Int64(write),
-						},
-						TableName: aws.String(tableName),
+					var input *dynamodb.UpdateTableInput
+
+					if len(gsis) > 0 {
+						var gsiu []*dynamodb.GlobalSecondaryIndexUpdate
+						for _, indexName := range gsis {
+							gsiu = append(gsiu, &dynamodb.GlobalSecondaryIndexUpdate{
+								Update: &dynamodb.UpdateGlobalSecondaryIndexAction{
+									IndexName: &indexName,
+									ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
+										ReadCapacityUnits:  aws.Int64(read),
+										WriteCapacityUnits: aws.Int64(write),
+									},
+								},
+							})
+						}
+
+						input = &dynamodb.UpdateTableInput{
+							ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
+								ReadCapacityUnits:  aws.Int64(read),
+								WriteCapacityUnits: aws.Int64(write),
+							},
+							GlobalSecondaryIndexUpdates: gsiu,
+							TableName:                   aws.String(tableName),
+						}
+					} else {
+						input = &dynamodb.UpdateTableInput{
+							ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
+								ReadCapacityUnits:  aws.Int64(read),
+								WriteCapacityUnits: aws.Int64(write),
+							},
+							TableName: aws.String(tableName),
+						}
 					}
 
 					update, err := ddbc.UpdateTable(input)
