@@ -88,7 +88,7 @@ var dynamodbCommand = func() cli.Command {
 								}
 							}
 						}
-						fmt.Printf("%d deleted", len(items))
+						fmt.Printf("deleted: %d\n", len(items))
 					}
 
 					params := dynamodb.ScanInput{
