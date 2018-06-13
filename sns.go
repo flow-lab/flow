@@ -10,6 +10,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/sns"
+	"time"
+	"sync"
 )
 
 var snsCommand = func() cli.Command {
@@ -32,6 +34,10 @@ var snsCommand = func() cli.Command {
 						Value: "1",
 					},
 					cli.StringFlag{
+						Name:  "delay",
+						Value: "0",
+					},
+					cli.StringFlag{
 						Name:  "profile",
 						Value: "",
 					},
@@ -41,6 +47,10 @@ var snsCommand = func() cli.Command {
 					topicName := c.String("topic-name")
 					message := c.String("message")
 					times, err := strconv.Atoi(c.String("times"))
+					if err != nil {
+						return err
+					}
+					delay, err := strconv.ParseInt(c.String("delay"), 10, 0)
 					if err != nil {
 						return err
 					}
@@ -54,24 +64,30 @@ var snsCommand = func() cli.Command {
 						Region: aws.String(endpoints.EuWest1RegionID),
 					})
 
+					var wg sync.WaitGroup
 					listTopicsParams := sns.ListTopicsInput{}
 					out, err := sqsc.ListTopics(&listTopicsParams)
 					for _, topic := range out.Topics {
 						if strings.Contains(*topic.TopicArn, topicName) {
 							for i := 0; i < times; i++ {
-								params := sns.PublishInput{
-									Message:  &message,
-									TopicArn: topic.TopicArn,
-								}
-								_, err := sqsc.Publish(&params)
-								if err != nil {
-									return err
-								}
-								fmt.Print(".")
+								wg.Add(1)
+								go func() {
+									defer wg.Done()
+									params := sns.PublishInput{
+										Message:  &message,
+										TopicArn: topic.TopicArn,
+									}
+									sqsc.Publish(&params)
+
+									fmt.Print(".")
+
+									time.Sleep(time.Duration(delay) * time.Millisecond)
+								}()
 							}
 						}
 					}
 
+					wg.Wait()
 					return nil
 				},
 			},
