@@ -9,6 +9,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"fmt"
+	"io/ioutil"
+	"encoding/json"
 )
 
 var cloudwatchlogsCommand = func() cli.Command {
@@ -60,6 +62,68 @@ var cloudwatchlogsCommand = func() cli.Command {
 						return err
 					}
 					fmt.Printf("ok")
+
+					return nil
+				},
+			},
+			{
+				Name:  "write-to-file",
+				Usage: "writes events to file in json format",
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "log-group-name",
+						Value: "",
+					},
+					cli.StringFlag{
+						Name:  "file-name",
+						Usage: "output file name",
+						Value: "output",
+					},
+					cli.StringFlag{
+						Name:  "filter-pattern",
+						Usage: "the filter pattern to use. If not provided, all the events are matched",
+						Value: "",
+					},
+					cli.StringFlag{
+						Name:  "profile",
+						Value: "",
+					},
+				},
+				Action: func(c *cli.Context) error {
+					profile := c.String("profile")
+					logGroupName := c.String("log-group-name")
+					fileName := c.String("file-name")
+					filterPattern := c.String("filter-pattern")
+					sess := session.Must(session.NewSessionWithOptions(session.Options{
+						AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
+						SharedConfigState:       session.SharedConfigEnable,
+						Profile:                 profile,
+					}))
+
+					cwlc := cloudwatchlogs.New(sess, &aws.Config{
+						Region: aws.String(endpoints.EuWest1RegionID),
+					})
+
+					params := cloudwatchlogs.FilterLogEventsInput{
+						LogGroupName:  &logGroupName,
+						FilterPattern: &filterPattern,
+					}
+
+					pageNum := 0
+					var logEvents []*cloudwatchlogs.FilteredLogEvent
+					err := cwlc.FilterLogEventsPages(&params, func(page *cloudwatchlogs.FilterLogEventsOutput, lastPage bool) bool {
+						pageNum++
+						for _, event := range page.Events {
+							logEvents = append(logEvents, event)
+						}
+						return lastPage == false
+					})
+
+					b, _ := json.Marshal(logEvents)
+					err = ioutil.WriteFile(fileName, b, 0644)
+					if err != nil {
+						return err
+					}
 
 					return nil
 				},
