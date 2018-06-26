@@ -208,6 +208,47 @@ var dynamodbCommand = func() cli.Command {
 					return nil
 				},
 			},
+			{
+				Name:  "describe-table",
+				Usage: "get table details",
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "profile",
+						Value: "",
+					},
+					cli.StringFlag{
+						Name:  "table-name",
+						Value: "",
+					},
+				},
+				Action: func(c *cli.Context) error {
+					profile := c.String("profile")
+					tableName := c.String("table-name")
+
+					sess := session.Must(session.NewSessionWithOptions(session.Options{
+						AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
+						SharedConfigState:       session.SharedConfigEnable,
+						Profile:                 profile,
+					}))
+
+					ddbc := dynamodb.New(sess, &aws.Config{
+						Region: aws.String(endpoints.EuWest1RegionID),
+					})
+
+					input := dynamodb.DescribeTableInput{
+						TableName: &tableName,
+					}
+
+					output, err := ddbc.DescribeTable(&input)
+					fmt.Printf("updated %v", output)
+
+					if err != nil {
+						return err
+					}
+
+					return nil
+				},
+			},
 		},
 	}
 }
