@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"time"
 )
 
 var dynamodbCommand = func() cli.Command {
@@ -61,6 +62,7 @@ var dynamodbCommand = func() cli.Command {
 								TableName: &tableName,
 								Key:       key,
 							}
+							retry := 1
 							for {
 								_, err := ddbc.DeleteItem(&deleteItemParam)
 								if err != nil {
@@ -82,7 +84,10 @@ var dynamodbCommand = func() cli.Command {
 									} else {
 										fmt.Println(err.Error())
 									}
-									fmt.Println("Retry DeleteItem...")
+									sleepTime := retry * retry * 100
+									time.Sleep(time.Duration(sleepTime) * time.Millisecond)
+									retry = retry + 1
+									fmt.Printf("Sleeping for %d milliseconds. Retry DeleteItem... \n", sleepTime)
 								} else {
 									break
 								}
