@@ -254,6 +254,51 @@ var dynamodbCommand = func() cli.Command {
 					return nil
 				},
 			},
+			{
+				Name:  "items-count",
+				Usage: "counts elements in table using scan operation",
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "profile",
+						Value: "",
+					},
+					cli.StringFlag{
+						Name:  "table-name",
+						Value: "",
+					},
+				},
+				Action: func(c *cli.Context) error {
+					profile := c.String("profile")
+					tableName := c.String("table-name")
+
+					sess := session.Must(session.NewSessionWithOptions(session.Options{
+						AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
+						SharedConfigState:       session.SharedConfigEnable,
+						Profile:                 profile,
+					}))
+
+					ddbc := dynamodb.New(sess, &aws.Config{
+						Region: aws.String(endpoints.EuWest1RegionID),
+					})
+
+					params := dynamodb.ScanInput{
+						TableName: &tableName,
+					}
+					nrOfItems := 0
+					err := ddbc.ScanPages(&params, func(output *dynamodb.ScanOutput, b bool) bool {
+						nrOfItems += len(output.Items)
+						return b == false
+					})
+
+					fmt.Printf("nr of items: %v", nrOfItems)
+
+					if err != nil {
+						return err
+					}
+
+					return nil
+				},
+			},
 		},
 	}
 }
