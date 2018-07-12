@@ -1,12 +1,8 @@
 # Flow AWS tooling
+
 Set of tooling commands for AWS development
 
-installation:
-```bash
-go get -u github.com/flow-lab/flow
-cd $GOPATH/src/github.com/flow-lab/flow
-go install
-```
+For installation with homebrew go to https://github.com/flow-lab/homebrew-tap
 
 example usage:
 ```bash
@@ -28,4 +24,11 @@ COMMANDS:
 
 OPTIONS:
    --help, -h  show help
+```
+
+### for local installation:
+```bash
+go get -u github.com/flow-lab/flow
+cd $GOPATH/src/github.com/flow-lab/flow
+go install
 ```
