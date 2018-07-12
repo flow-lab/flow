@@ -28,7 +28,7 @@ brew:
 
   # Your app's homepage.
   # Default is empty.
-  # homepage: "https://example.com/"
+  homepage: "https://www.flowlab.no/"
 
   # Your app's description.
   # Default is empty.
@@ -41,9 +41,9 @@ brew:
   skip_upload: false
 
   # Packages your package depends on.
-  dependencies:
-    - git
-    - zsh
+#  dependencies:
+#    - git
+#    - zsh
 
   # Packages that conflict with your package.
 #  conflicts:
@@ -58,9 +58,8 @@ brew:
 
   # So you can `brew test` your formula.
   # Default is empty.
-#  test: |
-#    system "#{bin}/program --version"
-#    ...
+  test: |
+    system "#{bin}/flow --version"
 
   # Custom install script for brew.
   # Default is 'bin.install "program"'.
