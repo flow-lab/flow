@@ -12,6 +12,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"time"
+	"os"
+	"encoding/json"
+	"io/ioutil"
 )
 
 var dynamodbCommand = func() cli.Command {
@@ -295,6 +298,81 @@ var dynamodbCommand = func() cli.Command {
 					if err != nil {
 						return err
 					}
+
+					return nil
+				},
+			},
+			{
+				Name:  "put-item",
+				Usage: "put item defined in input.json",
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "profile",
+						Value: "",
+					},
+					cli.StringFlag{
+						Name:  "table-name",
+						Value: "",
+					},
+				},
+				Action: func(c *cli.Context) error {
+					profile := c.String("profile")
+					tableName := c.String("table-name")
+					var item map[string]*dynamodb.AttributeValue
+
+					jsonFile, err := os.Open("input.json")
+					if err != nil {
+						fmt.Println("Error when opening input.json")
+						return err
+					}
+					defer jsonFile.Close()
+
+					byteValue, _ := ioutil.ReadAll(jsonFile)
+					err = json.Unmarshal(byteValue, &item)
+					if err != nil {
+						return err
+					}
+
+					sess := session.Must(session.NewSessionWithOptions(session.Options{
+						AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
+						SharedConfigState:       session.SharedConfigEnable,
+						Profile:                 profile,
+					}))
+
+					ddbc := dynamodb.New(sess, &aws.Config{
+						Region: aws.String(endpoints.EuWest1RegionID),
+					})
+
+					input := dynamodb.PutItemInput{
+						Item:                   item,
+						TableName:              &tableName,
+						ReturnConsumedCapacity: aws.String("TOTAL"),
+					}
+
+					fmt.Printf("request: %v", input)
+					result, err := ddbc.PutItem(&input)
+					if err != nil {
+						if aerr, ok := err.(awserr.Error); ok {
+							switch aerr.Code() {
+							case dynamodb.ErrCodeConditionalCheckFailedException:
+								fmt.Println(dynamodb.ErrCodeConditionalCheckFailedException, aerr.Error())
+							case dynamodb.ErrCodeProvisionedThroughputExceededException:
+								fmt.Println(dynamodb.ErrCodeProvisionedThroughputExceededException, aerr.Error())
+							case dynamodb.ErrCodeResourceNotFoundException:
+								fmt.Println(dynamodb.ErrCodeResourceNotFoundException, aerr.Error())
+							case dynamodb.ErrCodeItemCollectionSizeLimitExceededException:
+								fmt.Println(dynamodb.ErrCodeItemCollectionSizeLimitExceededException, aerr.Error())
+							case dynamodb.ErrCodeInternalServerError:
+								fmt.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
+							default:
+								return err
+							}
+						} else {
+							return err
+						}
+					}
+
+					fmt.Printf("result: %v", result)
 
 					return nil
 				},
