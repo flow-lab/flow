@@ -349,24 +349,63 @@ var dynamodbCommand = func() cli.Command {
 						ReturnConsumedCapacity: aws.String("TOTAL"),
 					}
 
-					fmt.Printf("request: %v", input)
 					result, err := ddbc.PutItem(&input)
 					if err != nil {
 						if aerr, ok := err.(awserr.Error); ok {
-							switch aerr.Code() {
-							case dynamodb.ErrCodeConditionalCheckFailedException:
-								fmt.Println(dynamodb.ErrCodeConditionalCheckFailedException, aerr.Error())
-							case dynamodb.ErrCodeProvisionedThroughputExceededException:
-								fmt.Println(dynamodb.ErrCodeProvisionedThroughputExceededException, aerr.Error())
-							case dynamodb.ErrCodeResourceNotFoundException:
-								fmt.Println(dynamodb.ErrCodeResourceNotFoundException, aerr.Error())
-							case dynamodb.ErrCodeItemCollectionSizeLimitExceededException:
-								fmt.Println(dynamodb.ErrCodeItemCollectionSizeLimitExceededException, aerr.Error())
-							case dynamodb.ErrCodeInternalServerError:
-								fmt.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
-							default:
-								return err
-							}
+							return aerr
+						} else {
+							return err
+						}
+					}
+
+					fmt.Printf("result: %v", result)
+
+					return nil
+				},
+			},
+			{
+				Name:  "restore-table-to-point-in-time",
+				Usage: "restore table to point in time",
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "profile",
+						Value: "",
+					},
+					cli.StringFlag{
+						Name:  "source-table-name",
+						Value: "",
+					},
+					cli.StringFlag{
+						Name:  "target-table-name",
+						Value: "",
+					},
+				},
+				Action: func(c *cli.Context) error {
+					profile := c.String("profile")
+					sourceTableName := c.String("source-table-name")
+					targetTableName := c.String("target-table-name")
+
+					sess := session.Must(session.NewSessionWithOptions(session.Options{
+						AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
+						SharedConfigState:       session.SharedConfigEnable,
+						Profile:                 profile,
+					}))
+
+					ddbc := dynamodb.New(sess, &aws.Config{
+						Region: aws.String(endpoints.EuWest1RegionID),
+					})
+
+					input := dynamodb.RestoreTableToPointInTimeInput{
+						SourceTableName: &sourceTableName,
+						TargetTableName: &targetTableName,
+						// TODO [grokrz]: parameter ?
+						UseLatestRestorableTime: aws.Bool(true),
+					}
+
+					result, err := ddbc.RestoreTableToPointInTime(&input)
+					if err != nil {
+						if aerr, ok := err.(awserr.Error); ok {
+							return aerr
 						} else {
 							return err
 						}
