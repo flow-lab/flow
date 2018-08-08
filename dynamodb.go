@@ -36,10 +36,19 @@ var dynamodbCommand = func() cli.Command {
 					cli.StringSliceFlag{
 						Name: "key",
 					},
+					cli.StringFlag{
+						Name:  "max-concurrent-pages-delete",
+						Value: "100",
+						Usage: "Max number of concurrent delete pages returned by scan operation",
+					},
 				},
 				Action: func(c *cli.Context) error {
 					profile := c.String("profile")
 					tableName := c.String("table-name")
+					maxConcurrent, err := strconv.Atoi(c.String("max-concurrent-pages-delete"))
+					if err != nil {
+						return err
+					}
 					sess := session.Must(session.NewSessionWithOptions(session.Options{
 						AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
 						SharedConfigState:       session.SharedConfigEnable,
@@ -94,7 +103,6 @@ var dynamodbCommand = func() cli.Command {
 									retry = retry + 1
 									fmt.Printf("Sleeping for %d milliseconds. Retry DeleteItem... \n", sleepTime)
 								} else {
-									fmt.Print(".")
 									break
 								}
 							}
@@ -107,7 +115,7 @@ var dynamodbCommand = func() cli.Command {
 					}
 					pageNr := 0
 					var wg sync.WaitGroup
-					err := ddbc.ScanPages(&params, func(output *dynamodb.ScanOutput, b bool) bool {
+					err = ddbc.ScanPages(&params, func(output *dynamodb.ScanOutput, b bool) bool {
 						targetMap := make([]map[string]*dynamodb.AttributeValue, len(output.Items))
 						for key, value := range output.Items {
 							targetMap[key] = value
@@ -116,8 +124,7 @@ var dynamodbCommand = func() cli.Command {
 						go purge(output.Items, pageNr, &wg)
 						pageNr += 1
 
-						// max 10 pages at a time
-						if pageNr % 10 == 0 {
+						if pageNr % maxConcurrent == 0 {
 							wg.Wait()
 						}
 						return b == false
