@@ -71,18 +71,23 @@ var snsCommand = func() cli.Command {
 						if strings.Contains(*topic.TopicArn, topicName) {
 							for i := 0; i < times; i++ {
 								wg.Add(1)
-								go func() {
+								go func(topicArn string) {
 									defer wg.Done()
 									params := sns.PublishInput{
 										Message:  &message,
-										TopicArn: topic.TopicArn,
+										TopicArn: &topicArn,
 									}
-									sqsc.Publish(&params)
+									fmt.Println(params)
+									_, err := sqsc.Publish(&params)
+
+									if err != nil {
+										fmt.Println("Unable to send to sns", err.Error())
+									}
 
 									fmt.Print(".")
 
 									time.Sleep(time.Duration(delay) * time.Millisecond)
-								}()
+								}(*topic.TopicArn)
 							}
 						}
 					}
