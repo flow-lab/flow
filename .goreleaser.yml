@@ -11,5 +11,5 @@ brew:
 s3:
 - bucket: flow-lab-artifact-public
   region: eu-west-1
-  profile:
+  profile: cloud-formation@flowlab-development
   acl: public-read
