@@ -274,7 +274,7 @@ var dynamodbCommand = func() cli.Command {
 				},
 			},
 			{
-				Name:  "items-count",
+				Name:  "count-item",
 				Usage: "counts elements in table using scan operation",
 				Flags: []cli.Flag{
 					cli.StringFlag{
