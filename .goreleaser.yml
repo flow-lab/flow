@@ -7,3 +7,9 @@ brew:
   description: "AWS tooling for faster development."
   test: |
     system "#{bin}/flow --version"
+
+s3:
+- bucket: flow-lab-artifact-public
+  region: eu-west-1
+  profile:
+  acl: public-read
