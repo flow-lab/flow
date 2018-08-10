@@ -4,15 +4,22 @@
 
 Set of tooling commands for AWS development
 
+## Installation
+
 For installation with homebrew go to https://github.com/flow-lab/homebrew-tap
 
+Installation on unix:
+```sh
+sudo snap install --edge flow
+```
+
 example usage:
-```bash
+```sh
 flow sqs describe --queue-name hello-in --profile dev@flowlab-dev
 ```
 
 help:
-```bash
+```sh
 flow --help
 NAME:
    development tooling for AWS - A new cli application
@@ -39,7 +46,7 @@ GLOBAL OPTIONS:
 
 or
 
-```bash
+```sh
 flow dynamodb --help
 NAME:
    development tooling for AWS dynamodb -
@@ -56,7 +63,7 @@ OPTIONS:
 ```
 
 ### for local installation:
-```bash
+```sh
 go get -u github.com/flow-lab/flow
 cd $GOPATH/src/github.com/flow-lab/flow
 go install
