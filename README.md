@@ -1,5 +1,7 @@
 # Flow AWS tooling
 
+[![Snap Status](https://build.snapcraft.io/badge/flow-lab/flow.svg)](https://build.snapcraft.io/user/flow-lab/flow)
+
 Set of tooling commands for AWS development
 
 For installation with homebrew go to https://github.com/flow-lab/homebrew-tap
