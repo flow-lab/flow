@@ -13,7 +13,7 @@ Installation on unix:
 sudo snap install --edge flow
 ```
 
-example usage:
+## example usage:
 ```sh
 flow sqs describe --queue-name hello-in --profile dev@flowlab-dev
 ```
