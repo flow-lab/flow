@@ -2,8 +2,6 @@ package main
 
 import (
 	"github.com/urfave/cli"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -36,11 +34,7 @@ var ssmCommand = func() cli.Command {
 				Action: func(c *cli.Context) error {
 					profile := c.String("profile")
 					outFileName := c.String("output-file-name")
-					sess := session.Must(session.NewSessionWithOptions(session.Options{
-						AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
-						SharedConfigState:       session.SharedConfigEnable,
-						Profile:                 profile,
-					}))
+					sess := NewSessionWithSharedProfile(profile)
 
 					ssmc := ssm.New(sess, &aws.Config{
 						Region: aws.String(endpoints.EuWest1RegionID),

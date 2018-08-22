@@ -3,8 +3,6 @@ package main
 import (
 	"github.com/urfave/cli"
 	"strconv"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
@@ -42,11 +40,7 @@ var cloudwatchlogsCommand = func() cli.Command {
 					if err != nil {
 						return err
 					}
-					sess := session.Must(session.NewSessionWithOptions(session.Options{
-						AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
-						SharedConfigState:       session.SharedConfigEnable,
-						Profile:                 profile,
-					}))
+					sess := NewSessionWithSharedProfile(profile)
 
 					cwlc := cloudwatchlogs.New(sess, &aws.Config{
 						Region: aws.String(endpoints.EuWest1RegionID),
@@ -94,11 +88,8 @@ var cloudwatchlogsCommand = func() cli.Command {
 					logGroupName := c.String("log-group-name")
 					fileName := c.String("file-name")
 					filterPattern := c.String("filter-pattern")
-					sess := session.Must(session.NewSessionWithOptions(session.Options{
-						AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
-						SharedConfigState:       session.SharedConfigEnable,
-						Profile:                 profile,
-					}))
+
+					sess := NewSessionWithSharedProfile(profile)
 
 					cwlc := cloudwatchlogs.New(sess, &aws.Config{
 						Region: aws.String(endpoints.EuWest1RegionID),

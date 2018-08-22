@@ -5,8 +5,6 @@ import (
 	"sync"
 	"fmt"
 	"strconv"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
@@ -49,11 +47,7 @@ var dynamodbCommand = func() cli.Command {
 					if err != nil {
 						return err
 					}
-					sess := session.Must(session.NewSessionWithOptions(session.Options{
-						AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
-						SharedConfigState:       session.SharedConfigEnable,
-						Profile:                 profile,
-					}))
+					sess := NewSessionWithSharedProfile(profile)
 
 					ddbc := dynamodb.New(sess, &aws.Config{
 						Region: aws.String(endpoints.EuWest1RegionID),
@@ -178,11 +172,7 @@ var dynamodbCommand = func() cli.Command {
 						return err
 					}
 
-					sess := session.Must(session.NewSessionWithOptions(session.Options{
-						AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
-						SharedConfigState:       session.SharedConfigEnable,
-						Profile:                 profile,
-					}))
+					sess := NewSessionWithSharedProfile(profile)
 
 					ddbc := dynamodb.New(sess, &aws.Config{
 						Region: aws.String(endpoints.EuWest1RegionID),
@@ -249,11 +239,7 @@ var dynamodbCommand = func() cli.Command {
 					profile := c.String("profile")
 					tableName := c.String("table-name")
 
-					sess := session.Must(session.NewSessionWithOptions(session.Options{
-						AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
-						SharedConfigState:       session.SharedConfigEnable,
-						Profile:                 profile,
-					}))
+					sess := NewSessionWithSharedProfile(profile)
 
 					ddbc := dynamodb.New(sess, &aws.Config{
 						Region: aws.String(endpoints.EuWest1RegionID),
@@ -290,11 +276,7 @@ var dynamodbCommand = func() cli.Command {
 					profile := c.String("profile")
 					tableName := c.String("table-name")
 
-					sess := session.Must(session.NewSessionWithOptions(session.Options{
-						AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
-						SharedConfigState:       session.SharedConfigEnable,
-						Profile:                 profile,
-					}))
+					sess := NewSessionWithSharedProfile(profile)
 
 					ddbc := dynamodb.New(sess, &aws.Config{
 						Region: aws.String(endpoints.EuWest1RegionID),
@@ -349,11 +331,7 @@ var dynamodbCommand = func() cli.Command {
 						return err
 					}
 
-					sess := session.Must(session.NewSessionWithOptions(session.Options{
-						AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
-						SharedConfigState:       session.SharedConfigEnable,
-						Profile:                 profile,
-					}))
+					sess := NewSessionWithSharedProfile(profile)
 
 					ddbc := dynamodb.New(sess, &aws.Config{
 						Region: aws.String(endpoints.EuWest1RegionID),
@@ -401,11 +379,7 @@ var dynamodbCommand = func() cli.Command {
 					sourceTableName := c.String("source-table-name")
 					targetTableName := c.String("target-table-name")
 
-					sess := session.Must(session.NewSessionWithOptions(session.Options{
-						AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
-						SharedConfigState:       session.SharedConfigEnable,
-						Profile:                 profile,
-					}))
+					sess := NewSessionWithSharedProfile(profile)
 
 					ddbc := dynamodb.New(sess, &aws.Config{
 						Region: aws.String(endpoints.EuWest1RegionID),
