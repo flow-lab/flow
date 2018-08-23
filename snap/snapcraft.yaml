@@ -4,7 +4,7 @@ summary: AWS tooling.
 description: |
   Tooling for AWS development.
 
-grade: devel
+grade: stable
 confinement: devmode
 
 parts:
