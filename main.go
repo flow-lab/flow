@@ -1,10 +1,10 @@
 package main
 
 import (
+	"fmt"
+	"github.com/urfave/cli"
 	"log"
 	"os"
-	"github.com/urfave/cli"
-	"fmt"
 )
 
 func main() {
@@ -19,6 +19,7 @@ func main() {
 		cloudwatchCommand(),
 		cloudwatchlogsCommand(),
 		ssmCommand(),
+		secretsmanagerCommand(),
 	}
 
 	app.Action = func(c *cli.Context) error {
