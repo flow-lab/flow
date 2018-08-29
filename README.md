@@ -6,9 +6,11 @@ Set of tooling commands for AWS development
 
 For installation with homebrew go to https://github.com/flow-lab/homebrew-tap
 
-Installation on unix:
+Installation on other systems:
+
+Get and run script:
 ```sh
-sudo snap install --edge flow
+curl https://github.com/flow-lab/flow/blob/master/bin/get-latest.sh --output get-latest.sh
 ```
 
 ## example usage:
