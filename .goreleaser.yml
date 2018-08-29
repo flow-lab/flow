@@ -13,3 +13,23 @@ s3:
   region: eu-west-1
   profile: "cloud-formation@flowlab-development"
   acl: public-read
+
+snapcraft:
+  name: flow
+  version: git
+  summary: AWS tooling.
+  description: |
+    Tooling for AWS development.
+
+  grade: stable
+  confinement: strict
+
+  parts:
+    flow:
+      source: .
+      plugin: go
+      go-importpath: github.com/flow-lab/flow
+
+  apps:
+    flow:
+      command: flow
