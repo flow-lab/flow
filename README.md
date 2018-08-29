@@ -6,7 +6,7 @@ Set of tooling commands for AWS development
 
 For installation with homebrew go to https://github.com/flow-lab/homebrew-tap
 
-Installation on other systems:
+### Installation on other systems
 
 Get and run script:
 ```sh
