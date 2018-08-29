@@ -24,9 +24,6 @@ type Secret struct {
 	RSAValue RSAValue `json:"rsaValue,omitempty"`
 }
 
-type Secrets struct {
-	Secrets []Secret `json:"secrets"`
-}
 type SecretOutput struct {
 	Entry *secretsmanager.SecretListEntry
 	Value *secretsmanager.GetSecretValueOutput
@@ -85,6 +82,89 @@ var secretsmanagerCommand = func() cli.Command {
 				},
 			},
 			{
+				Name:  "delete-all",
+				Usage: "deletes all values from secretsmanager",
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "profile",
+						Value: "",
+					},
+				},
+				Action: func(c *cli.Context) error {
+					profile := c.String("profile")
+					sess := NewSessionWithSharedProfile(profile)
+
+					ssmc := secretsmanager.New(sess, &aws.Config{
+						Region: aws.String(endpoints.EuWest1RegionID),
+					})
+
+					listTopicsParams := secretsmanager.ListSecretsInput{}
+					ssmc.ListSecretsPages(&listTopicsParams, func(output *secretsmanager.ListSecretsOutput, lastPage bool) bool {
+						for _, elem := range output.SecretList {
+
+							getSecretValueInput := secretsmanager.DeleteSecretInput{
+								SecretId: elem.ARN,
+							}
+							_, err := ssmc.DeleteSecret(&getSecretValueInput)
+							if err != nil {
+								panic(err)
+							}
+							fmt.Printf("deleted: %v\n", &elem.Name)
+						}
+						return lastPage == false
+					})
+					return nil
+				},
+			},
+			{
+				Name:  "restore-all",
+				Usage: "resotres all values from input file",
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name: "input-file-name",
+					},
+					cli.StringFlag{
+						Name:  "profile",
+						Value: "",
+					},
+				},
+				Action: func(c *cli.Context) error {
+					profile := c.String("profile")
+					sess := NewSessionWithSharedProfile(profile)
+					inFileName := c.String("input-file-name")
+					if inFileName == "" {
+						return fmt.Errorf("input-file-name not found")
+					}
+					jsonFile, err := os.Open(inFileName)
+					if err != nil {
+						return fmt.Errorf("error when opening %s", inFileName)
+					}
+					defer jsonFile.Close()
+
+					ssmc := secretsmanager.New(sess, &aws.Config{
+						Region: aws.String(endpoints.EuWest1RegionID),
+					})
+
+					var secrets []*Secret
+					byteValue, _ := ioutil.ReadAll(jsonFile)
+					if err := json.Unmarshal(byteValue, &secrets); err != nil {
+						return err
+					}
+
+					for _, secret := range secrets {
+						restoreInput := secretsmanager.RestoreSecretInput{
+							SecretId: &secret.Name,
+						}
+						_, err := ssmc.RestoreSecret(&restoreInput)
+						if err != nil {
+							panic(err)
+						}
+						fmt.Printf("restored: %s\n", secret.Name)
+					}
+					return nil
+				},
+			},
+			{
 				Name:  "create-secrets",
 				Usage: "createsSecrets from file",
 				Flags: []cli.Flag{
@@ -111,35 +191,33 @@ var secretsmanagerCommand = func() cli.Command {
 					}
 					defer jsonFile.Close()
 
-					secrets := Secrets{}
+					var secrets []*Secret
 					byteValue, _ := ioutil.ReadAll(jsonFile)
 					if err := json.Unmarshal(byteValue, &secrets); err != nil {
 						return err
 					}
 
 					var inputs []*secretsmanager.CreateSecretInput
-					for _, secret := range secrets.Secrets {
+					for _, secret := range secrets {
 						if secret.Type == "value" || secret.Type == "password" {
 							input := secretsmanager.CreateSecretInput{
-								ClientRequestToken: aws.String(secret.Id),
-								Name:               aws.String(secret.Name),
-								SecretString:       aws.String(secret.Value),
+								Name:         aws.String(secret.Name),
+								SecretString: aws.String(secret.Value),
 							}
 							inputs = append(inputs, &input)
-						}
-
-						if secret.Type == "rsa" {
+						} else if secret.Type == "rsa" {
 							var rsa []byte
 							if rsa, err = json.Marshal(secret.RSAValue); err != nil {
 								return err
 							}
 
 							input := secretsmanager.CreateSecretInput{
-								ClientRequestToken: aws.String(secret.Id),
-								Name:               aws.String(secret.Name),
-								SecretString:       aws.String(string(rsa)),
+								Name:         aws.String(secret.Name),
+								SecretBinary: rsa,
 							}
 							inputs = append(inputs, &input)
+						} else {
+							fmt.Printf("unable to process version: %v", secret.Type)
 						}
 					}
 
@@ -147,6 +225,74 @@ var secretsmanagerCommand = func() cli.Command {
 
 					for _, input := range inputs {
 						if _, err := sm.CreateSecret(input); err != nil {
+							return err
+						}
+					}
+
+					return nil
+				},
+			},
+			{
+				Name:  "update",
+				Usage: "update secrets from file",
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name: "input-file-name",
+					},
+					cli.StringFlag{
+						Name:  "profile",
+						Value: "",
+					},
+				},
+				Action: func(c *cli.Context) error {
+					profile := c.String("profile")
+					inFileName := c.String("input-file-name")
+					if inFileName == "" {
+						return fmt.Errorf("input-file-name not found")
+					}
+
+					sess := NewSessionWithSharedProfile(profile)
+
+					jsonFile, err := os.Open(inFileName)
+					if err != nil {
+						return fmt.Errorf("error when opening %s", inFileName)
+					}
+					defer jsonFile.Close()
+
+					var secrets []*Secret
+					byteValue, _ := ioutil.ReadAll(jsonFile)
+					if err := json.Unmarshal(byteValue, &secrets); err != nil {
+						return err
+					}
+
+					var inputs []*secretsmanager.UpdateSecretInput
+					for _, secret := range secrets {
+						if secret.Type == "value" || secret.Type == "password" {
+							input := secretsmanager.UpdateSecretInput{
+								SecretId:     aws.String(secret.Name),
+								SecretString: aws.String(secret.Value),
+							}
+							inputs = append(inputs, &input)
+						} else if secret.Type == "rsa" {
+							var rsa []byte
+							if rsa, err = json.Marshal(secret.RSAValue); err != nil {
+								return err
+							}
+
+							input := secretsmanager.UpdateSecretInput{
+								SecretId:     aws.String(secret.Name),
+								SecretBinary: rsa,
+							}
+							inputs = append(inputs, &input)
+						} else {
+							fmt.Printf("unable to process version: %v", secret.Type)
+						}
+					}
+
+					sm := secretsmanager.New(sess)
+
+					for _, input := range inputs {
+						if _, err := sm.UpdateSecret(input); err != nil {
 							return err
 						}
 					}
