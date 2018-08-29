@@ -16,7 +16,6 @@ s3:
 
 snapcraft:
   name: flow
-  version: git
   summary: AWS tooling.
   description: |
     Tooling for AWS development.
@@ -24,12 +23,6 @@ snapcraft:
   grade: stable
   confinement: strict
 
-  parts:
-    flow:
-      source: .
-      plugin: go
-      go-importpath: github.com/flow-lab/flow
-
   apps:
     flow:
-      command: flow
+      plugs: ["home", "network"]
