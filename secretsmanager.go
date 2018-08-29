@@ -35,7 +35,7 @@ var secretsmanagerCommand = func() cli.Command {
 		Subcommands: []cli.Command{
 			{
 				Name:  "export",
-				Usage: "exports ssm parameters and their values to json",
+				Usage: "exports secrets and their values to json",
 				Flags: []cli.Flag{
 					cli.StringFlag{
 						Name:  "output-file-name",
@@ -49,17 +49,17 @@ var secretsmanagerCommand = func() cli.Command {
 				Action: func(c *cli.Context) error {
 					profile := c.String("profile")
 					outFileName := c.String("output-file-name")
+
 					sess := NewSessionWithSharedProfile(profile)
 
 					ssmc := secretsmanager.New(sess, &aws.Config{
 						Region: aws.String(endpoints.EuWest1RegionID),
 					})
 
-					listTopicsParams := secretsmanager.ListSecretsInput{}
+					listSecretsInput := secretsmanager.ListSecretsInput{}
 					var entries []*SecretOutput
-					ssmc.ListSecretsPages(&listTopicsParams, func(output *secretsmanager.ListSecretsOutput, lastPage bool) bool {
+					ssmc.ListSecretsPages(&listSecretsInput, func(output *secretsmanager.ListSecretsOutput, lastPage bool) bool {
 						for _, elem := range output.SecretList {
-
 							getSecretValueInput := secretsmanager.GetSecretValueInput{
 								SecretId: elem.ARN,
 							}
@@ -76,8 +76,15 @@ var secretsmanagerCommand = func() cli.Command {
 						return lastPage == false
 					})
 
+					if entries == nil {
+						fmt.Println("no secrets found")
+						return nil
+					}
+
 					b, _ := json.Marshal(entries)
 					_ = ioutil.WriteFile(outFileName, b, 0644)
+
+					fmt.Printf("exported to %s", outFileName)
 					return nil
 				},
 			},
@@ -98,14 +105,14 @@ var secretsmanagerCommand = func() cli.Command {
 						Region: aws.String(endpoints.EuWest1RegionID),
 					})
 
-					listTopicsParams := secretsmanager.ListSecretsInput{}
-					ssmc.ListSecretsPages(&listTopicsParams, func(output *secretsmanager.ListSecretsOutput, lastPage bool) bool {
+					listSecretsInput := secretsmanager.ListSecretsInput{}
+					ssmc.ListSecretsPages(&listSecretsInput, func(output *secretsmanager.ListSecretsOutput, lastPage bool) bool {
 						for _, elem := range output.SecretList {
 
-							getSecretValueInput := secretsmanager.DeleteSecretInput{
+							deleteSecretInput := secretsmanager.DeleteSecretInput{
 								SecretId: elem.ARN,
 							}
-							_, err := ssmc.DeleteSecret(&getSecretValueInput)
+							_, err := ssmc.DeleteSecret(&deleteSecretInput)
 							if err != nil {
 								panic(err)
 							}
