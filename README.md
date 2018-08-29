@@ -10,7 +10,7 @@ For installation with homebrew go to https://github.com/flow-lab/homebrew-tap
 
 Get and run script:
 ```sh
-curl https://github.com/flow-lab/flow/blob/master/bin/get-latest.sh --output get-latest.sh
+curl https://raw.githubusercontent.com/flow-lab/flow/master/bin/get-latest.sh --output get-latest.sh
 ```
 
 ## example usage:
