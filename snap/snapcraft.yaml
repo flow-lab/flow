@@ -5,7 +5,7 @@ description: |
   Tooling for AWS development.
 
 grade: stable
-confinement: strict
+confinement: classic
 
 parts:
   flow:
