@@ -1,18 +1,18 @@
 package main
 
 import (
-	"github.com/urfave/cli"
-	"sync"
-	"fmt"
-	"strconv"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"time"
-	"os"
 	"encoding/json"
+	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/urfave/cli"
 	"io/ioutil"
+	"os"
+	"strconv"
+	"sync"
+	"time"
 )
 
 var dynamodbCommand = func() cli.Command {
@@ -36,7 +36,7 @@ var dynamodbCommand = func() cli.Command {
 					},
 					cli.StringFlag{
 						Name:  "max-concurrent-pages-delete",
-						Value: "100",
+						Value: "5",
 						Usage: "Max number of concurrent delete pages returned by scan operation",
 					},
 				},
@@ -53,55 +53,68 @@ var dynamodbCommand = func() cli.Command {
 						Region: aws.String(endpoints.EuWest1RegionID),
 					})
 
+					input := &dynamodb.DescribeTableInput{
+						TableName: aws.String(tableName),
+					}
+
+					result, err := ddbc.DescribeTable(input)
 
 					purge := func(items []map[string]*dynamodb.AttributeValue, pageNr int, wg *sync.WaitGroup) {
 						defer wg.Done()
 
-						for _, element := range items {
-							key := map[string]*dynamodb.AttributeValue{}
-							keys := c.StringSlice("key")
-							for _, myKey := range keys {
-								key[myKey] = element[myKey]
-							}
+						if len(items) == 0 {
+							return
+						}
 
+						var batches [][]map[string]*dynamodb.AttributeValue
+
+						batchSize := 25
+						for batchSize < len(items) {
+							items, batches = items[batchSize:], append(batches, items[0:batchSize:batchSize])
+						}
+						batches = append(batches, items)
+
+						for _, batch := range batches {
 							time.Sleep(time.Duration(10) * time.Millisecond)
 
-							deleteItemParam := dynamodb.DeleteItemInput{
-								TableName: &tableName,
-								Key:       key,
+							var wrs []*dynamodb.WriteRequest
+
+							for _, item := range batch {
+								key := make(map[string]*dynamodb.AttributeValue)
+								for _, ks := range result.Table.KeySchema {
+									key[*ks.AttributeName] = item[*ks.AttributeName]
+								}
+
+								dr := dynamodb.DeleteRequest{
+									Key: key,
+								}
+								wrs = append(wrs, &dynamodb.WriteRequest{
+									DeleteRequest: &dr,
+								})
+							}
+
+							input := &dynamodb.BatchWriteItemInput{
+								RequestItems: map[string][]*dynamodb.WriteRequest{
+									tableName: wrs,
+								},
 							}
 							retry := 1
 							for {
-								_, err := ddbc.DeleteItem(&deleteItemParam)
+								_, err := ddbc.BatchWriteItem(input)
 								if err != nil {
 									if aerr, ok := err.(awserr.Error); ok {
-										switch aerr.Code() {
-										case dynamodb.ErrCodeConditionalCheckFailedException:
-											fmt.Println(dynamodb.ErrCodeConditionalCheckFailedException, aerr.Error())
-										case dynamodb.ErrCodeProvisionedThroughputExceededException:
-											fmt.Println(dynamodb.ErrCodeProvisionedThroughputExceededException, aerr.Error())
-										case dynamodb.ErrCodeResourceNotFoundException:
-											fmt.Println(dynamodb.ErrCodeResourceNotFoundException, aerr.Error())
-										case dynamodb.ErrCodeItemCollectionSizeLimitExceededException:
-											fmt.Println(dynamodb.ErrCodeItemCollectionSizeLimitExceededException, aerr.Error())
-										case dynamodb.ErrCodeInternalServerError:
-											fmt.Println(dynamodb.ErrCodeInternalServerError, aerr.Error())
-										default:
-											fmt.Println(aerr.Error())
-										}
-									} else {
-										fmt.Println(err.Error())
+										fmt.Println(aerr.Error())
 									}
 									sleepTime := retry * retry * 100
 									time.Sleep(time.Duration(sleepTime) * time.Millisecond)
 									retry = retry + 1
-									fmt.Printf("Sleeping for %d milliseconds. Retry DeleteItem... \n", sleepTime)
+									fmt.Printf("Sleeping for %d milliseconds. Retry DeleteBatch... \n", sleepTime)
 								} else {
 									break
 								}
 							}
 						}
-						fmt.Printf("deleted: %d\n", len(items))
+						fmt.Print(".")
 					}
 
 					params := dynamodb.ScanInput{
@@ -115,10 +128,12 @@ var dynamodbCommand = func() cli.Command {
 							targetMap[key] = value
 						}
 						wg.Add(1)
-						go purge(output.Items, pageNr, &wg)
+						cpy := make([]map[string]*dynamodb.AttributeValue, len(output.Items))
+						copy(cpy, output.Items)
+						go purge(cpy, pageNr, &wg)
 						pageNr += 1
 
-						if pageNr % maxConcurrent == 0 {
+						if pageNr%maxConcurrent == 0 {
 							wg.Wait()
 						}
 						return b == false
@@ -129,6 +144,7 @@ var dynamodbCommand = func() cli.Command {
 
 					wg.Wait()
 
+					fmt.Println("done")
 					return nil
 				},
 			},
