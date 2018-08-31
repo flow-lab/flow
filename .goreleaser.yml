@@ -25,16 +25,3 @@ s3:
   region: eu-west-1
   profile: "cloud-formation@flowlab-development"
   acl: public-read
-
-snapcraft:
-  name: flow
-  summary: AWS tooling.
-  description: |
-    Tooling for AWS development.
-
-  grade: stable
-  confinement: strict
-
-  apps:
-    flow:
-      plugs: ["home", "network"]
