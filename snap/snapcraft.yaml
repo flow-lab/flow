@@ -16,3 +16,4 @@ parts:
 apps:
   flow:
     command: flow
+    plugs: [home, network, network-bind]
