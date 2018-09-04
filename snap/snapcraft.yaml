@@ -12,7 +12,8 @@ parts:
     source: .
     plugin: go
     go-importpath: github.com/flow-lab/flow
+    build-attributes: [no-patchelf]
 
 apps:
   flow:
-    command: flow
+    command: bin/flow
