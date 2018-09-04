@@ -4,18 +4,38 @@ Set of tooling commands for AWS development
 
 ## Installation
 
-For installation with homebrew go to https://github.com/flow-lab/homebrew-tap
+* [homebrew](https://github.com/flow-lab/homebrew-tap)
 
-### Installation on other systems
+    ```sh
+    brew install flow-lab/tap/flow
+    ```
 
-Get and run script:
-```sh
-curl https://raw.githubusercontent.com/flow-lab/flow/master/bin/get-latest.sh --output get-latest.sh
-```
+* [snap](https://snapcraft.io/flow)
+
+    ```sh
+    sudo snap install flow --classic
+    ``` 
+
+* latest version from github releases
+
+    ```sh
+    curl https://raw.githubusercontent.com/flow-lab/flow/master/bin/get-latest.sh --output get-latest.sh
+    chmod +x get-latest.sh
+    ./get-latest.sh
+    ```
+    
+* local with go get
+
+    ```sh
+    go get -u github.com/flow-lab/flow
+    cd $GOPATH/src/github.com/flow-lab/flow
+    go install
+    ```
 
 ## example usage:
+
 ```sh
-flow sqs describe --queue-name hello-in --profile dev@flowlab-dev
+flow dynamodb purge --table-name TestTable --key tableId --profile cloudformation@flowlab-dev
 ```
 
 help:
@@ -62,9 +82,29 @@ OPTIONS:
    --help, -h  show help
 ```
 
-### for local installation:
-```sh
-go get -u github.com/flow-lab/flow
-cd $GOPATH/src/github.com/flow-lab/flow
-go install
-```
+## authentication
+
+Flow will authenticate using the same methods defined by [aws-cli][auth].
+
+Currently it supports authentication with:
+
+* A [EnvProvider][EnvProvider] which retrieves credentials from the environment variables of the
+  running process. Environment credentials never expire.
+  Environment variables used:
+  
+  * Access Key ID:     AWS_ACCESS_KEY_ID or AWS_ACCESS_KEY
+
+  * Secret Access Key: AWS_SECRET_ACCESS_KEY or AWS_SECRET_KEY
+  
+* A [SharedCredentialsProvider][SharedCredentialsProvider] which retrieves credentials from the current user's home
+  directory, and keeps track if those credentials are expired.
+  
+  Profile ini file example: $HOME/.aws/credentials
+  
+* A AssumeRoleTokenProvider with enabled SharedConfigState which uses MFA prompting for token code on stdin.
+  Go to [session doc][session] for more details.
+
+[auth]: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html
+[envProvider]: https://docs.aws.amazon.com/sdk-for-go/api/aws/credentials/#EnvProvider
+[sharedCredentialsProvider]: https://docs.aws.amazon.com/sdk-for-go/api/aws/credentials/#SharedCredentialsProvider
+[session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
