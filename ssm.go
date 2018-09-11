@@ -1,11 +1,12 @@
 package main
 
 import (
-	"github.com/urfave/cli"
+	"encoding/json"
+	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/ssm"
-	"encoding/json"
+	"github.com/urfave/cli"
 	"io/ioutil"
 )
 
@@ -40,12 +41,11 @@ var ssmCommand = func() cli.Command {
 						Region: aws.String(endpoints.EuWest1RegionID),
 					})
 
-					listTopicsParams := ssm.DescribeParametersInput{
-					}
+					listTopicsParams := ssm.DescribeParametersInput{}
 					var parameters []Parameter
-					ssmc.DescribeParametersPages(&listTopicsParams, func(output *ssm.DescribeParametersOutput, lastPage bool) bool {
+					err := ssmc.DescribeParametersPages(&listTopicsParams, func(output *ssm.DescribeParametersOutput, lastPage bool) bool {
+						fmt.Println(output.Parameters)
 						for _, elem := range output.Parameters {
-
 							param := ssm.GetParameterInput{
 								Name: elem.Name,
 								WithDecryption: func() *bool {
@@ -62,9 +62,16 @@ var ssmCommand = func() cli.Command {
 						}
 						return lastPage == false
 					})
+					if err != nil {
+						panic(err)
+					}
 
-					b, _ := json.Marshal(parameters)
+					b, err := json.Marshal(parameters)
+					if err != nil {
+						panic(err)
+					}
 					_ = ioutil.WriteFile(outFileName, b, 0644)
+					fmt.Printf("wrote to %v", outFileName)
 					return nil
 				},
 			},
