@@ -1,12 +1,15 @@
 package main
 
 import (
-	"github.com/urfave/cli"
-	"strings"
+	"encoding/json"
 	"fmt"
-	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
+	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/urfave/cli"
+	"io/ioutil"
+	"os"
+	"strings"
 )
 
 var sqsCommand = func() cli.Command {
@@ -35,8 +38,7 @@ var sqsCommand = func() cli.Command {
 						Region: aws.String(endpoints.EuWest1RegionID),
 					})
 
-					params := sqs.ListQueuesInput{
-					}
+					params := sqs.ListQueuesInput{}
 					resp, err := sqsc.ListQueues(&params)
 					if err != nil {
 						return err
@@ -52,6 +54,81 @@ var sqsCommand = func() cli.Command {
 								return err
 							}
 							fmt.Printf("Purged %v", queueName)
+						}
+					}
+
+					return nil
+				},
+			},
+			{
+				Name:  "send",
+				Usage: "send message to sqs",
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "queue-name",
+						Value: "",
+					},
+					cli.StringFlag{
+						Name: "input-file-name",
+					},
+					cli.StringFlag{
+						Name:  "message-attributes",
+						Value: "",
+					},
+					cli.StringFlag{
+						Name:  "profile",
+						Value: "",
+					},
+				},
+				Action: func(c *cli.Context) error {
+					profile := c.String("profile")
+					queueName := c.String("queue-name")
+					inFileName := c.String("input-file-name")
+					if inFileName == "" {
+						return fmt.Errorf("input-file-name not found")
+					}
+					msgAttributes := c.String("message-attributes")
+					sess := NewSessionWithSharedProfile(profile)
+
+					jsonFile, err := os.Open(inFileName)
+					if err != nil {
+						return fmt.Errorf("error when opening %s", inFileName)
+					}
+					byteValue, _ := ioutil.ReadAll(jsonFile)
+					defer jsonFile.Close()
+
+					sqsc := sqs.New(sess, &aws.Config{
+						Region: aws.String(endpoints.EuWest1RegionID),
+					})
+
+					params := sqs.ListQueuesInput{}
+					resp, err := sqsc.ListQueues(&params)
+					if err != nil {
+						return err
+					}
+
+					var messageAttributes map[string]*sqs.MessageAttributeValue
+
+					if msgAttributes != "" {
+						messageAttributes = map[string]*sqs.MessageAttributeValue{}
+						json.Unmarshal([]byte(msgAttributes), &messageAttributes)
+					}
+
+					for _, elem := range resp.QueueUrls {
+						if strings.Contains(*elem, queueName) {
+							smi := sqs.SendMessageInput{
+								QueueUrl: elem,
+								MessageBody: func() *string {
+									s := string(byteValue[:])
+									return &s
+								}(),
+								MessageAttributes: messageAttributes,
+							}
+							_, err := sqsc.SendMessage(&smi)
+							if err != nil {
+								return err
+							}
+							fmt.Printf("Sent to %v", queueName)
 						}
 					}
 
@@ -93,8 +170,7 @@ var sqsCommand = func() cli.Command {
 						Region: aws.String(endpoints.EuWest1RegionID),
 					})
 
-					params := sqs.ListQueuesInput{
-					}
+					params := sqs.ListQueuesInput{}
 					resp, err := sqsc.ListQueues(&params)
 					if err != nil {
 						return err
@@ -139,8 +215,7 @@ var sqsCommand = func() cli.Command {
 						Region: aws.String(endpoints.EuWest1RegionID),
 					})
 
-					params := sqs.ListQueuesInput{
-					}
+					params := sqs.ListQueuesInput{}
 					resp, err := sqsc.ListQueues(&params)
 					if err != nil {
 						return err
