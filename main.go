@@ -10,7 +10,7 @@ import (
 func main() {
 	app := cli.NewApp()
 	app.Name = "development tooling for AWS"
-	app.Version = "0.1.27"
+	app.Version = "0.1.28"
 
 	app.Commands = []cli.Command{
 		dynamodbCommand(),
@@ -21,6 +21,7 @@ func main() {
 		ssmCommand(),
 		secretsmanagerCommand(),
 		kinesisCommand(),
+		base64Command(),
 	}
 
 	app.Action = func(c *cli.Context) error {
