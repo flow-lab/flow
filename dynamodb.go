@@ -31,9 +31,6 @@ var dynamodbCommand = func() cli.Command {
 						Name:  "table-name",
 						Value: "",
 					},
-					cli.StringSliceFlag{
-						Name: "key",
-					},
 					cli.StringFlag{
 						Name:  "max-concurrent-pages-delete",
 						Value: "5",
@@ -63,6 +60,7 @@ var dynamodbCommand = func() cli.Command {
 						defer wg.Done()
 
 						if len(items) == 0 {
+							fmt.Printf("empty items")
 							return
 						}
 
@@ -100,8 +98,11 @@ var dynamodbCommand = func() cli.Command {
 							}
 							retry := 1
 							for {
-								_, err := ddbc.BatchWriteItem(input)
-								if err != nil {
+								res, err := ddbc.BatchWriteItem(input)
+								if err != nil || len(res.UnprocessedItems) > 0 {
+									if len(res.UnprocessedItems) > 0 {
+										fmt.Println("Unable to delete. Provisioned throughput too low...")
+									}
 									if aerr, ok := err.(awserr.Error); ok {
 										fmt.Println(aerr.Error())
 									}
@@ -122,7 +123,7 @@ var dynamodbCommand = func() cli.Command {
 					}
 					pageNr := 0
 					var wg sync.WaitGroup
-					err = ddbc.ScanPages(&params, func(output *dynamodb.ScanOutput, b bool) bool {
+					err = ddbc.ScanPages(&params, func(output *dynamodb.ScanOutput, lastPage bool) bool {
 						targetMap := make([]map[string]*dynamodb.AttributeValue, len(output.Items))
 						for key, value := range output.Items {
 							targetMap[key] = value
@@ -136,7 +137,7 @@ var dynamodbCommand = func() cli.Command {
 						if pageNr%maxConcurrent == 0 {
 							wg.Wait()
 						}
-						return b == false
+						return lastPage == false
 					})
 					if err != nil {
 						return err
