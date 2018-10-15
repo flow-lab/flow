@@ -33,7 +33,7 @@ var dynamodbCommand = func() cli.Command {
 					},
 					cli.StringFlag{
 						Name:  "max-concurrent-pages-delete",
-						Value: "5",
+						Value: "50",
 						Usage: "Max number of concurrent delete pages returned by scan operation",
 					},
 				},
@@ -100,16 +100,9 @@ var dynamodbCommand = func() cli.Command {
 							for {
 								res, err := ddbc.BatchWriteItem(input)
 								if err != nil || len(res.UnprocessedItems) > 0 {
-									if len(res.UnprocessedItems) > 0 {
-										fmt.Println("Unable to delete. Provisioned throughput too low...")
-									}
-									if aerr, ok := err.(awserr.Error); ok {
-										fmt.Println(aerr.Error())
-									}
 									sleepTime := retry * retry * 100
 									time.Sleep(time.Duration(sleepTime) * time.Millisecond)
 									retry = retry + 1
-									fmt.Printf("Sleeping for %d milliseconds. Retry DeleteBatch... \n", sleepTime)
 								} else {
 									break
 								}
