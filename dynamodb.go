@@ -368,6 +368,98 @@ var dynamodbCommand = func() cli.Command {
 				},
 			},
 			{
+				Name:  "delete-items",
+				Usage: "deletes items",
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "table-name",
+						Value: "",
+					},
+					cli.StringFlag{
+						Name:  "keys",
+						Value: "",
+					},
+					cli.StringFlag{
+						Name:  "profile",
+						Value: "",
+					},
+				},
+				Action: func(c *cli.Context) error {
+					profile := c.String("profile")
+					tableName := c.String("table-name")
+					keys := c.String("keys")
+					var items []map[string]*dynamodb.AttributeValue
+
+					if tableName == "" {
+						return fmt.Errorf("missing --tableName paramteter")
+					}
+					if keys == "" {
+						return fmt.Errorf("missing --keys parameter")
+					}
+
+					jsonFile, err := os.Open(keys)
+					if err != nil {
+						fmt.Printf("Error when opening %v \n", keys)
+						return err
+					}
+					defer jsonFile.Close()
+
+					byteValue, _ := ioutil.ReadAll(jsonFile)
+					err = json.Unmarshal(byteValue, &items)
+					if err != nil {
+						return err
+					}
+
+					sess := NewSessionWithSharedProfile(profile)
+
+					ddbc := dynamodb.New(sess, &aws.Config{
+						Region: aws.String(endpoints.EuWest1RegionID),
+					})
+
+					var batches [][]map[string]*dynamodb.AttributeValue
+					batchSize := 25
+					for batchSize < len(items) {
+						items, batches = items[batchSize:], append(batches, items[0:batchSize:batchSize])
+					}
+					batches = append(batches, items)
+
+					for _, batch := range batches {
+						var wrs []*dynamodb.WriteRequest
+						for _, item := range batch {
+							dr := dynamodb.DeleteRequest{
+								Key: item,
+							}
+							wrs = append(wrs, &dynamodb.WriteRequest{
+								DeleteRequest: &dr,
+							})
+						}
+
+						input := &dynamodb.BatchWriteItemInput{
+							RequestItems: map[string][]*dynamodb.WriteRequest{
+								tableName: wrs,
+							},
+						}
+						retry := 1
+						for {
+							res, err := ddbc.BatchWriteItem(input)
+							if err != nil || len(res.UnprocessedItems) > 0 {
+								if aerr, ok := err.(awserr.Error); ok {
+									fmt.Println(aerr.Error())
+								}
+								sleepTime := retry * retry * 100
+								time.Sleep(time.Duration(sleepTime) * time.Millisecond)
+								retry = retry + 1
+							} else {
+								break
+							}
+						}
+						fmt.Print(".")
+					}
+
+					return nil
+				},
+			},
+			{
 				Name:  "restore-table-to-point-in-time",
 				Usage: "restore table to point in time",
 				Flags: []cli.Flag{
