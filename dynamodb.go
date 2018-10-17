@@ -312,10 +312,14 @@ var dynamodbCommand = func() cli.Command {
 			},
 			{
 				Name:  "put-item",
-				Usage: "put item defined in input.json",
+				Usage: "put item(s)",
 				Flags: []cli.Flag{
 					cli.StringFlag{
 						Name:  "profile",
+						Value: "",
+					},
+					cli.StringFlag{
+						Name:  "input",
 						Value: "",
 					},
 					cli.StringFlag{
@@ -326,17 +330,25 @@ var dynamodbCommand = func() cli.Command {
 				Action: func(c *cli.Context) error {
 					profile := c.String("profile")
 					tableName := c.String("table-name")
-					var item map[string]*dynamodb.AttributeValue
+					input := c.String("input")
+					var items []map[string]*dynamodb.AttributeValue
 
-					jsonFile, err := os.Open("input.json")
+					if tableName == "" {
+						return fmt.Errorf("missing --tableName parameter")
+					}
+					if input == "" {
+						return fmt.Errorf("missing --input parameter")
+					}
+
+					jsonFile, err := os.Open(input)
 					if err != nil {
-						fmt.Println("Error when opening input.json")
+						fmt.Printf("Error when opening %v \n", input)
 						return err
 					}
 					defer jsonFile.Close()
 
 					byteValue, _ := ioutil.ReadAll(jsonFile)
-					err = json.Unmarshal(byteValue, &item)
+					err = json.Unmarshal(byteValue, &items)
 					if err != nil {
 						return err
 					}
@@ -347,29 +359,52 @@ var dynamodbCommand = func() cli.Command {
 						Region: aws.String(endpoints.EuWest1RegionID),
 					})
 
-					input := dynamodb.PutItemInput{
-						Item:                   item,
-						TableName:              &tableName,
-						ReturnConsumedCapacity: aws.String("TOTAL"),
+					var batches [][]map[string]*dynamodb.AttributeValue
+					batchSize := 25
+					for batchSize < len(items) {
+						items, batches = items[batchSize:], append(batches, items[0:batchSize:batchSize])
 					}
+					batches = append(batches, items)
 
-					result, err := ddbc.PutItem(&input)
-					if err != nil {
-						if aerr, ok := err.(awserr.Error); ok {
-							return aerr
-						} else {
-							return err
+					for _, batch := range batches {
+						var wrs []*dynamodb.WriteRequest
+						for _, item := range batch {
+							dr := dynamodb.PutRequest{
+								Item: item,
+							}
+							wrs = append(wrs, &dynamodb.WriteRequest{
+								PutRequest: &dr,
+							})
+
+							input := &dynamodb.BatchWriteItemInput{
+								RequestItems: map[string][]*dynamodb.WriteRequest{
+									tableName: wrs,
+								},
+							}
+							retry := 1
+							for {
+								res, err := ddbc.BatchWriteItem(input)
+								if err != nil || len(res.UnprocessedItems) > 0 {
+									if aerr, ok := err.(awserr.Error); ok {
+										fmt.Println(aerr.Error())
+									}
+									sleepTime := retry * retry * 100
+									time.Sleep(time.Duration(sleepTime) * time.Millisecond)
+									retry = retry + 1
+								} else {
+									break
+								}
+							}
+							fmt.Print(".")
 						}
 					}
-
-					fmt.Printf("result: %v", result)
 
 					return nil
 				},
 			},
 			{
-				Name:  "delete-items",
-				Usage: "deletes items",
+				Name:  "delete-item",
+				Usage: "delete item(s)",
 				Flags: []cli.Flag{
 					cli.StringFlag{
 						Name:  "table-name",
@@ -391,7 +426,7 @@ var dynamodbCommand = func() cli.Command {
 					var items []map[string]*dynamodb.AttributeValue
 
 					if tableName == "" {
-						return fmt.Errorf("missing --tableName paramteter")
+						return fmt.Errorf("missing --tableName parameter")
 					}
 					if keys == "" {
 						return fmt.Errorf("missing --keys parameter")
