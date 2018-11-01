@@ -205,10 +205,6 @@ var dynamodbCommand = func() cli.Command {
 						}
 
 						input = &dynamodb.UpdateTableInput{
-							ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
-								ReadCapacityUnits:  aws.Int64(read),
-								WriteCapacityUnits: aws.Int64(write),
-							},
 							GlobalSecondaryIndexUpdates: gsiu,
 							TableName:                   aws.String(tableName),
 						}
