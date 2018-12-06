@@ -28,6 +28,10 @@ var dynamodbCommand = func() cli.Command {
 						Value: "",
 					},
 					cli.StringFlag{
+						Name:  "filter-expression",
+						Value: "",
+					},
+					cli.StringFlag{
 						Name:  "table-name",
 						Value: "",
 					},
@@ -40,6 +44,7 @@ var dynamodbCommand = func() cli.Command {
 				Action: func(c *cli.Context) error {
 					profile := c.String("profile")
 					tableName := c.String("table-name")
+					filterExpression := c.String("filter-expression")
 					maxConcurrent, err := strconv.Atoi(c.String("max-concurrent-pages-delete"))
 					if err != nil {
 						return err
@@ -114,6 +119,11 @@ var dynamodbCommand = func() cli.Command {
 					params := dynamodb.ScanInput{
 						TableName: &tableName,
 					}
+
+					if filterExpression != "" {
+						params.FilterExpression = &filterExpression
+					}
+
 					pageNr := 0
 					var wg sync.WaitGroup
 					err = ddbc.ScanPages(&params, func(output *dynamodb.ScanOutput, lastPage bool) bool {
@@ -121,11 +131,13 @@ var dynamodbCommand = func() cli.Command {
 						for key, value := range output.Items {
 							targetMap[key] = value
 						}
-						wg.Add(1)
-						cpy := make([]map[string]*dynamodb.AttributeValue, len(output.Items))
-						copy(cpy, output.Items)
-						go purge(cpy, pageNr, &wg)
-						pageNr += 1
+						if len(output.Items) > 0 {
+							wg.Add(1)
+							cpy := make([]map[string]*dynamodb.AttributeValue, len(output.Items))
+							copy(cpy, output.Items)
+							go purge(cpy, pageNr, &wg)
+							pageNr += 1
+						}
 
 						if pageNr%maxConcurrent == 0 {
 							wg.Wait()
