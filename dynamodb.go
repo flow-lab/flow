@@ -590,36 +590,66 @@ var dynamodbCommand = func() cli.Command {
 					}
 
 					var l []map[string]*dynamodb.AttributeValue
+					writer := bufio.NewWriter(os.Stdout)
+					_, werr := writer.Write([]byte("["))
+					if werr != nil {
+						return werr
+					}
+
+					var shouldWriteToFile bool
+					if fileName != "" {
+						shouldWriteToFile = true
+					}
+
 					err := ddbc.ScanPages(&params, func(output *dynamodb.ScanOutput, lastPage bool) bool {
 						if *output.Count > int64(0) {
 							for _, elem := range output.Items {
-								l = append(l, elem)
+								if shouldWriteToFile {
+									l = append(l, elem)
+								} else {
+
+									if json, err := json.Marshal(elem); err == nil {
+										if _, err := writer.Write(json); err != nil {
+											fmt.Printf("%v", elem)
+											panic(err)
+										}
+									} else {
+										fmt.Printf("%v", elem)
+										panic("unable to marshal")
+									}
+
+									if lastPage == false {
+										if _, err := writer.Write([]byte(",")); err != nil {
+											panic(err)
+										}
+									}
+								}
 							}
-							fmt.Print(".")
 						}
+
 						return lastPage == false
 					})
 					if err != nil {
 						return err
 					}
 
-					json, err := json.Marshal(l)
-					if err != nil {
+					if _, err := writer.Write([]byte("]")); werr != nil {
 						return err
 					}
 
-					if fileName != "" {
-						err = ioutil.WriteFile(fileName, json, 0644)
-						if err != nil {
-							return err
+					if shouldWriteToFile {
+						var jso []byte
+						var werr error
+						if jso, werr = json.Marshal(l); err == nil {
+							if err := ioutil.WriteFile(fileName, jso, 0644); err != nil {
+								return err
+							}
+							fmt.Printf("result wrote to: %v", fileName)
+						} else {
+							fmt.Printf("%v", werr)
+							panic("unable to write to file")
 						}
-						fmt.Printf("result wrote to: %v", fileName)
-					} else {
-						writer := bufio.NewWriter(os.Stdout)
-						_, err = writer.Write(json)
-						if err != nil {
-							return err
-						}
+
 					}
 
 					return nil
