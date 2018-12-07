@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
@@ -131,13 +132,11 @@ var dynamodbCommand = func() cli.Command {
 						for key, value := range output.Items {
 							targetMap[key] = value
 						}
-						if len(output.Items) > 0 {
-							wg.Add(1)
-							cpy := make([]map[string]*dynamodb.AttributeValue, len(output.Items))
-							copy(cpy, output.Items)
-							go purge(cpy, pageNr, &wg)
-							pageNr += 1
-						}
+						wg.Add(1)
+						cpy := make([]map[string]*dynamodb.AttributeValue, len(output.Items))
+						copy(cpy, output.Items)
+						go purge(cpy, pageNr, &wg)
+						pageNr += 1
 
 						if pageNr%maxConcurrent == 0 {
 							wg.Wait()
@@ -154,7 +153,6 @@ var dynamodbCommand = func() cli.Command {
 					return nil
 				},
 			},
-
 			{
 				Name:  "capacity",
 				Usage: "update read and write capacity",
@@ -547,6 +545,82 @@ var dynamodbCommand = func() cli.Command {
 					}
 
 					fmt.Printf("result: %v", result)
+
+					return nil
+				},
+			},
+			{
+				Name:  "search",
+				Usage: "search for records using scan operation",
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "profile",
+						Value: "",
+					},
+					cli.StringFlag{
+						Name:  "filter-expression",
+						Value: "",
+					},
+					cli.StringFlag{
+						Name:  "file-name",
+						Value: "",
+					},
+					cli.StringFlag{
+						Name:  "table-name",
+						Value: "",
+					},
+				},
+				Action: func(c *cli.Context) error {
+					profile := c.String("profile")
+					tableName := c.String("table-name")
+					filterExpression := c.String("filter-expression")
+					fileName := c.String("file-name")
+					sess := NewSessionWithSharedProfile(profile)
+
+					ddbc := dynamodb.New(sess, &aws.Config{
+						Region: aws.String(endpoints.EuWest1RegionID),
+					})
+
+					params := dynamodb.ScanInput{
+						TableName: &tableName,
+					}
+
+					if filterExpression != "" {
+						params.FilterExpression = &filterExpression
+					}
+
+					var l []map[string]*dynamodb.AttributeValue
+					err := ddbc.ScanPages(&params, func(output *dynamodb.ScanOutput, lastPage bool) bool {
+						if *output.Count > int64(0) {
+							for _, elem := range output.Items {
+								l = append(l, elem)
+							}
+							fmt.Print(".")
+						}
+						return lastPage == false
+					})
+					if err != nil {
+						return err
+					}
+
+					json, err := json.Marshal(l)
+					if err != nil {
+						return err
+					}
+
+					if fileName != "" {
+						err = ioutil.WriteFile(fileName, json, 0644)
+						if err != nil {
+							return err
+						}
+						fmt.Printf("result wrote to: %v", fileName)
+					} else {
+						writer := bufio.NewWriter(os.Stdout)
+						_, err = writer.Write(json)
+						if err != nil {
+							return err
+						}
+					}
 
 					return nil
 				},
