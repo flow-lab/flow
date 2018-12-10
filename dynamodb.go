@@ -393,7 +393,7 @@ var dynamodbCommand = func() cli.Command {
 								if aerr, ok := err.(awserr.Error); ok {
 									fmt.Println(aerr.Error())
 								} else {
-									fmt.Println("throttling when batch write, consider updating write capacity. Going to retry ...")
+									fmt.Print("\nthrottling when batch write, consider updating write capacity. Going to retry ...")
 								}
 								sleepTime := retry * retry * 100
 								time.Sleep(time.Duration(sleepTime) * time.Millisecond)
@@ -592,24 +592,26 @@ var dynamodbCommand = func() cli.Command {
 					}
 
 					var l []map[string]*dynamodb.AttributeValue
-					writer := bufio.NewWriter(os.Stdout)
-					_, werr := writer.Write([]byte("["))
-					if werr != nil {
-						return werr
-					}
-
 					var shouldWriteToFile bool
 					if fileName != "" {
 						shouldWriteToFile = true
 					}
 
+					writer := bufio.NewWriter(os.Stdout)
+					defer writer.Flush()
+					if !shouldWriteToFile {
+						if _, err := writer.Write([]byte("[")); err != nil {
+							return err
+						}
+					}
+
 					err := ddbc.ScanPages(&params, func(output *dynamodb.ScanOutput, lastPage bool) bool {
 						if *output.Count > int64(0) {
-							for _, elem := range output.Items {
+							fmt.Println(lastPage)
+							for i, elem := range output.Items {
 								if shouldWriteToFile {
 									l = append(l, elem)
 								} else {
-
 									if json, err := json.Marshal(elem); err == nil {
 										if _, err := writer.Write(json); err != nil {
 											fmt.Printf("%v", elem)
@@ -620,11 +622,17 @@ var dynamodbCommand = func() cli.Command {
 										panic("unable to marshal")
 									}
 
-									if lastPage == false {
+									if i < len(output.Items)-1 {
 										if _, err := writer.Write([]byte(",")); err != nil {
 											panic(err)
 										}
 									}
+								}
+							}
+
+							if !shouldWriteToFile && lastPage == false {
+								if _, err := writer.Write([]byte(",")); err != nil {
+									panic(err)
 								}
 							}
 						}
@@ -632,10 +640,6 @@ var dynamodbCommand = func() cli.Command {
 						return lastPage == false
 					})
 					if err != nil {
-						return err
-					}
-
-					if _, err := writer.Write([]byte("]")); werr != nil {
 						return err
 					}
 
@@ -651,7 +655,10 @@ var dynamodbCommand = func() cli.Command {
 							fmt.Printf("%v", werr)
 							panic("unable to write to file")
 						}
-
+					} else {
+						if _, err := writer.Write([]byte("]")); err != nil {
+							return err
+						}
 					}
 
 					return nil
