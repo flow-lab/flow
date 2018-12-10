@@ -402,7 +402,9 @@ var dynamodbCommand = func() cli.Command {
 								break
 							}
 						}
-						fmt.Print(".")
+						for range batch {
+							fmt.Print(".")
+						}
 					}
 
 					return nil
