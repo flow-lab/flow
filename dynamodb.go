@@ -374,6 +374,7 @@ var dynamodbCommand = func() cli.Command {
 
 					for _, batch := range batches {
 						var wrs []*dynamodb.WriteRequest
+						input := &dynamodb.BatchWriteItemInput{}
 						for _, item := range batch {
 							dr := dynamodb.PutRequest{
 								Item: item,
@@ -382,27 +383,26 @@ var dynamodbCommand = func() cli.Command {
 								PutRequest: &dr,
 							})
 
-							input := &dynamodb.BatchWriteItemInput{
-								RequestItems: map[string][]*dynamodb.WriteRequest{
-									tableName: wrs,
-								},
-							}
-							retry := 1
-							for {
-								res, err := ddbc.BatchWriteItem(input)
-								if err != nil || len(res.UnprocessedItems) > 0 {
-									if aerr, ok := err.(awserr.Error); ok {
-										fmt.Println(aerr.Error())
-									}
-									sleepTime := retry * retry * 100
-									time.Sleep(time.Duration(sleepTime) * time.Millisecond)
-									retry = retry + 1
-								} else {
-									break
-								}
-							}
-							fmt.Print(".")
+							input.RequestItems = map[string][]*dynamodb.WriteRequest{tableName: wrs}
 						}
+
+						retry := 1
+						for {
+							res, err := ddbc.BatchWriteItem(input)
+							if err != nil || len(res.UnprocessedItems) > 0 {
+								if aerr, ok := err.(awserr.Error); ok {
+									fmt.Println(aerr.Error())
+								} else {
+									fmt.Println("throttling when batch write, consider updating write capacity. Going to retry ...")
+								}
+								sleepTime := retry * retry * 100
+								time.Sleep(time.Duration(sleepTime) * time.Millisecond)
+								retry = retry + 1
+							} else {
+								break
+							}
+						}
+						fmt.Print(".")
 					}
 
 					return nil
