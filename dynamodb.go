@@ -564,6 +564,10 @@ var dynamodbCommand = func() cli.Command {
 						Value: "",
 					},
 					cli.StringFlag{
+						Name:  "projection-expression",
+						Value: "",
+					},
+					cli.StringFlag{
 						Name:  "file-name",
 						Value: "",
 					},
@@ -576,6 +580,7 @@ var dynamodbCommand = func() cli.Command {
 					profile := c.String("profile")
 					tableName := c.String("table-name")
 					filterExpression := c.String("filter-expression")
+					projectionExpression := c.String("projection-expression")
 					fileName := c.String("file-name")
 					sess := NewSessionWithSharedProfile(profile)
 
@@ -589,6 +594,10 @@ var dynamodbCommand = func() cli.Command {
 
 					if filterExpression != "" {
 						params.FilterExpression = &filterExpression
+					}
+
+					if projectionExpression != "" {
+						params.ProjectionExpression = &projectionExpression
 					}
 
 					var l []map[string]*dynamodb.AttributeValue
