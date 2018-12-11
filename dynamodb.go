@@ -607,7 +607,6 @@ var dynamodbCommand = func() cli.Command {
 
 					err := ddbc.ScanPages(&params, func(output *dynamodb.ScanOutput, lastPage bool) bool {
 						if *output.Count > int64(0) {
-							fmt.Println(lastPage)
 							for i, elem := range output.Items {
 								if shouldWriteToFile {
 									l = append(l, elem)
