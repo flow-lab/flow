@@ -503,6 +503,183 @@ var dynamodbCommand = func() cli.Command {
 				},
 			},
 			{
+				Name:  "map-to-primary-key",
+				Usage: "gets GSI keys and maps to Primary Keys using Query",
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "table-name",
+						Value: "",
+					},
+					cli.StringFlag{
+						Name:  "secondary-index",
+						Value: "",
+					},
+					cli.StringFlag{
+						Name:  "projection-expression",
+						Value: "",
+					},
+					cli.StringFlag{
+						Name:  "keys",
+						Value: "",
+					},
+					cli.StringFlag{
+						Name:  "file-name",
+						Value: "",
+					},
+					cli.StringFlag{
+						Name:  "profile",
+						Value: "",
+					},
+				},
+				Action: func(c *cli.Context) error {
+					profile := c.String("profile")
+					tableName := c.String("table-name")
+					projectionExpression := c.String("projection-expression")
+					keys := c.String("keys")
+					fileName := c.String("file-name")
+					secondaryIndex := c.String("secondary-index")
+					var items []map[string]*dynamodb.AttributeValue
+
+					if tableName == "" {
+						return fmt.Errorf("missing --tableName parameter")
+					}
+					if keys == "" {
+						return fmt.Errorf("missing --keys parameter")
+					}
+					if secondaryIndex == "" {
+						return fmt.Errorf("missing --secondary-index parameter")
+					}
+
+					jsonFile, err := os.Open(keys)
+					if err != nil {
+						fmt.Printf("Error when opening %v \n", keys)
+						return err
+					}
+					defer jsonFile.Close()
+
+					byteValue, _ := ioutil.ReadAll(jsonFile)
+					err = json.Unmarshal(byteValue, &items)
+					if err != nil {
+						return err
+					}
+
+					sess := NewSessionWithSharedProfile(profile)
+					ddbc := dynamodb.New(sess, &aws.Config{
+						Region: aws.String(endpoints.EuWest1RegionID),
+					})
+
+					var shouldWriteToFile bool
+					if fileName != "" {
+						shouldWriteToFile = true
+					}
+
+					writer := bufio.NewWriter(os.Stdout)
+					defer writer.Flush()
+					if !shouldWriteToFile {
+						if _, err := writer.Write([]byte("[")); err != nil {
+							return err
+						}
+					}
+
+					itemsBefore := false
+					var results []map[string]*dynamodb.AttributeValue
+					for _, item := range items {
+						query := &dynamodb.QueryInput{
+							TableName: &tableName,
+						}
+						if secondaryIndex != "" {
+							query.IndexName = &secondaryIndex
+						}
+						if projectionExpression != "" {
+							query.ProjectionExpression = &projectionExpression
+						}
+
+						expressionAttributeValues := map[string]*dynamodb.AttributeValue{}
+						for key, val := range item {
+							expressionAttributeValues[":"+key] = val
+						}
+						query.ExpressionAttributeValues = expressionAttributeValues
+
+						var keyConditionExpression string
+						for key := range item {
+							if keyConditionExpression == "" {
+								keyConditionExpression = fmt.Sprintf("%s = :%s", key, key)
+							} else {
+								keyConditionExpression = fmt.Sprintf(" AND %s = :%s", key, key)
+							}
+						}
+						query.KeyConditionExpression = aws.String(keyConditionExpression)
+
+						retry := 1
+						for {
+							queryOutput, err := ddbc.Query(query)
+							if err != nil {
+								if aerr, ok := err.(awserr.Error); ok {
+									fmt.Println(aerr.Error())
+								}
+								sleepTime := retry * retry * 100
+								time.Sleep(time.Duration(sleepTime) * time.Millisecond)
+								retry = retry + 1
+							} else {
+								if *queryOutput.Count > 0 && itemsBefore {
+									if _, err := writer.Write([]byte(",")); err != nil {
+										panic(err)
+									}
+								}
+								itemsBefore = true
+
+								for i, item := range queryOutput.Items {
+									if shouldWriteToFile {
+										results = append(results, item)
+									} else {
+										if json, err := json.Marshal(item); err == nil {
+											if _, err := writer.Write(json); err != nil {
+												fmt.Printf("%v", item)
+												panic(err)
+											}
+										} else {
+											fmt.Printf("%v", item)
+											panic("unable to marshal")
+										}
+
+										if i < len(queryOutput.Items)-1 {
+											if _, err := writer.Write([]byte(",")); err != nil {
+												panic(err)
+											}
+										}
+									}
+								}
+
+								break
+							}
+						}
+						if shouldWriteToFile {
+							fmt.Print(".")
+						}
+					}
+
+					if shouldWriteToFile {
+						var jso []byte
+						var werr error
+						if jso, werr = json.Marshal(results); err == nil {
+							if err := ioutil.WriteFile(fileName, jso, 0644); err != nil {
+								return err
+							}
+							fmt.Printf("result wrote to: %v", fileName)
+						} else {
+							fmt.Printf("%v", werr)
+							panic("unable to write to file")
+						}
+					} else {
+						if _, err := writer.Write([]byte("]")); err != nil {
+							return err
+						}
+					}
+
+					return nil
+				},
+			},
+			{
 				Name:  "restore-table-to-point-in-time",
 				Usage: "restore table to point in time",
 				Flags: []cli.Flag{
