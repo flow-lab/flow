@@ -614,8 +614,18 @@ var dynamodbCommand = func() cli.Command {
 						}
 					}
 
+					itemsBefore := false
 					err := ddbc.ScanPages(&params, func(output *dynamodb.ScanOutput, lastPage bool) bool {
 						if *output.Count > int64(0) {
+							// lets try to stream in comma
+							if itemsBefore && !shouldWriteToFile {
+								if _, err := writer.Write([]byte(",")); err != nil {
+									panic(err)
+								}
+							}
+							// ok, there is one record in the list before
+							itemsBefore = true
+
 							for i, elem := range output.Items {
 								if shouldWriteToFile {
 									l = append(l, elem)
@@ -635,12 +645,6 @@ var dynamodbCommand = func() cli.Command {
 											panic(err)
 										}
 									}
-								}
-							}
-
-							if !shouldWriteToFile && lastPage == false {
-								if _, err := writer.Write([]byte(",")); err != nil {
-									panic(err)
 								}
 							}
 						}
