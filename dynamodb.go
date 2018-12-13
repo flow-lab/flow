@@ -548,9 +548,6 @@ var dynamodbCommand = func() cli.Command {
 					if keys == "" {
 						return fmt.Errorf("missing --keys parameter")
 					}
-					if secondaryIndex == "" {
-						return fmt.Errorf("missing --secondary-index parameter")
-					}
 
 					jsonFile, err := os.Open(keys)
 					if err != nil {
@@ -623,9 +620,11 @@ var dynamodbCommand = func() cli.Command {
 								time.Sleep(time.Duration(sleepTime) * time.Millisecond)
 								retry = retry + 1
 							} else {
-								if *queryOutput.Count > 0 && itemsBefore {
-									if _, err := writer.Write([]byte(",")); err != nil {
-										panic(err)
+								if !shouldWriteToFile {
+									if *queryOutput.Count > 0 && itemsBefore {
+										if _, err := writer.Write([]byte(",")); err != nil {
+											panic(err)
+										}
 									}
 								}
 								itemsBefore = true
@@ -849,6 +848,70 @@ var dynamodbCommand = func() cli.Command {
 					} else {
 						if _, err := writer.Write([]byte("]")); err != nil {
 							return err
+						}
+					}
+
+					return nil
+				},
+			},
+			{
+				Name:  "delete-backup",
+				Usage: "delete backup(s)",
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "profile",
+						Value: "",
+					},
+					cli.StringFlag{
+						Name:  "table-name",
+						Value: "",
+					},
+					cli.StringFlag{
+						Name:  "until-date",
+						Value: "",
+					},
+				},
+				Action: func(c *cli.Context) error {
+					profile := c.String("profile")
+					tableName := c.String("table-name")
+					untilDateStr := c.String("until-date")
+
+					var t time.Time
+					if untilDateStr == "" {
+						t = time.Now()
+					} else {
+						var err error
+						t, err = time.Parse(time.RFC3339, untilDateStr)
+						if err != nil {
+							return err
+						}
+					}
+
+					sess := NewSessionWithSharedProfile(profile)
+
+					ddbc := dynamodb.New(sess, &aws.Config{
+						Region: aws.String(endpoints.EuWest1RegionID),
+					})
+
+					listBackupsInput := &dynamodb.ListBackupsInput{
+						TableName: &tableName,
+					}
+
+					listBackupsOutput, err := ddbc.ListBackups(listBackupsInput)
+					if err != nil {
+						return err
+					}
+
+					for _, bs := range listBackupsOutput.BackupSummaries {
+						if bs.BackupCreationDateTime.Before(t) {
+							deleteBackupInput := &dynamodb.DeleteBackupInput{
+								BackupArn: bs.BackupArn,
+							}
+							output, err := ddbc.DeleteBackup(deleteBackupInput)
+							if err != nil {
+								panic(err)
+							}
+							fmt.Printf("deleted: %v \n", *output.BackupDescription.BackupDetails)
 						}
 					}
 
