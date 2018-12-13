@@ -61,6 +61,9 @@ var dynamodbCommand = func() cli.Command {
 					}
 
 					result, err := ddbc.DescribeTable(input)
+					if err != nil {
+						return err
+					}
 
 					purge := func(items []map[string]*dynamodb.AttributeValue, pageNr int, wg *sync.WaitGroup) {
 						defer wg.Done()
