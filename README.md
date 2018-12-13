@@ -19,8 +19,8 @@ Set of tooling commands for AWS development
 * latest version from github releases
 
     ```sh
-    curl https://raw.githubusercontent.com/flow-lab/flow/master/bin/get-latest.sh --output get-latest.sh
-    chmod +x get-latest.sh
+    curl https://raw.githubusercontent.com/flow-lab/flow/master/bin/get-latest.sh --output get-latest.sh \
+    chmod +x get-latest.sh \
     ./get-latest.sh
     ```
     
