@@ -66,7 +66,6 @@ var dynamodbCommand = func() cli.Command {
 						defer wg.Done()
 
 						if len(items) == 0 {
-							fmt.Printf("empty items")
 							return
 						}
 
