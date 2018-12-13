@@ -911,6 +911,8 @@ var dynamodbCommand = func() cli.Command {
 							if err != nil {
 								panic(err)
 							}
+							// we need to sleep a bit, max 10 times per second
+							time.Sleep(time.Duration(100) * time.Millisecond)
 							fmt.Printf("deleted: %v \n", *output.BackupDescription.BackupDetails)
 						}
 					}
