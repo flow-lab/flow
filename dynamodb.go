@@ -41,11 +41,16 @@ var dynamodbCommand = func() cli.Command {
 						Value: "50",
 						Usage: "Max number of concurrent delete pages returned by scan operation",
 					},
+					cli.StringFlag{
+						Name:  "expression-attribute-values",
+						Value: "",
+					},
 				},
 				Action: func(c *cli.Context) error {
 					profile := c.String("profile")
 					tableName := c.String("table-name")
 					filterExpression := c.String("filter-expression")
+					expressionAttributeValues := c.String("expression-attribute-values")
 					maxConcurrent, err := strconv.Atoi(c.String("max-concurrent-pages-delete"))
 					if err != nil {
 						return err
@@ -125,6 +130,15 @@ var dynamodbCommand = func() cli.Command {
 
 					if filterExpression != "" {
 						params.FilterExpression = &filterExpression
+					}
+
+					if expressionAttributeValues != "" {
+						var m map[string]*dynamodb.AttributeValue
+						err := json.Unmarshal([]byte(expressionAttributeValues), &m)
+						if err != nil {
+							return err
+						}
+						params.ExpressionAttributeValues = m
 					}
 
 					pageNr := 0
@@ -742,6 +756,10 @@ var dynamodbCommand = func() cli.Command {
 						Value: "",
 					},
 					cli.StringFlag{
+						Name:  "expression-attribute-values",
+						Value: "",
+					},
+					cli.StringFlag{
 						Name:  "projection-expression",
 						Value: "",
 					},
@@ -758,6 +776,7 @@ var dynamodbCommand = func() cli.Command {
 					profile := c.String("profile")
 					tableName := c.String("table-name")
 					filterExpression := c.String("filter-expression")
+					expressionAttributeValues := c.String("expression-attribute-values")
 					projectionExpression := c.String("projection-expression")
 					fileName := c.String("file-name")
 					sess := NewSessionWithSharedProfile(profile)
@@ -772,6 +791,15 @@ var dynamodbCommand = func() cli.Command {
 
 					if filterExpression != "" {
 						params.FilterExpression = &filterExpression
+					}
+
+					if expressionAttributeValues != "" {
+						var m map[string]*dynamodb.AttributeValue
+						err := json.Unmarshal([]byte(expressionAttributeValues), &m)
+						if err != nil {
+							return err
+						}
+						params.ExpressionAttributeValues = m
 					}
 
 					if projectionExpression != "" {
