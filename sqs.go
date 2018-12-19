@@ -3,8 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/urfave/cli"
 	"io/ioutil"
@@ -34,9 +32,7 @@ var sqsCommand = func() cli.Command {
 					queueName := c.String("queue-name")
 					sess := NewSessionWithSharedProfile(profile)
 
-					sqsc := sqs.New(sess, &aws.Config{
-						Region: aws.String(endpoints.EuWest1RegionID),
-					})
+					sqsc := sqs.New(sess)
 
 					params := sqs.ListQueuesInput{}
 					resp, err := sqsc.ListQueues(&params)
@@ -97,9 +93,7 @@ var sqsCommand = func() cli.Command {
 					byteValue, _ := ioutil.ReadAll(jsonFile)
 					defer jsonFile.Close()
 
-					sqsc := sqs.New(sess, &aws.Config{
-						Region: aws.String(endpoints.EuWest1RegionID),
-					})
+					sqsc := sqs.New(sess)
 
 					params := sqs.ListQueuesInput{}
 					resp, err := sqsc.ListQueues(&params)
@@ -166,9 +160,7 @@ var sqsCommand = func() cli.Command {
 
 					sess := NewSessionWithSharedProfile(profile)
 
-					sqsc := sqs.New(sess, &aws.Config{
-						Region: aws.String(endpoints.EuWest1RegionID),
-					})
+					sqsc := sqs.New(sess)
 
 					params := sqs.ListQueuesInput{}
 					resp, err := sqsc.ListQueues(&params)
@@ -211,9 +203,7 @@ var sqsCommand = func() cli.Command {
 					queueName := c.String("queue-name")
 					sess := NewSessionWithSharedProfile(profile)
 
-					sqsc := sqs.New(sess, &aws.Config{
-						Region: aws.String(endpoints.EuWest1RegionID),
-					})
+					sqsc := sqs.New(sess)
 
 					params := sqs.ListQueuesInput{}
 					resp, err := sqsc.ListQueues(&params)

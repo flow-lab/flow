@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/kinesis"
 	"github.com/urfave/cli"
 	"strconv"
@@ -40,9 +39,7 @@ var kinesisCommand = func() cli.Command {
 
 					sess := NewSessionWithSharedProfile(profile)
 
-					kinesisc := kinesis.New(sess, &aws.Config{
-						Region: aws.String(endpoints.EuWest1RegionID),
-					})
+					kinesisc := kinesis.New(sess)
 					updateShardCountInput := kinesis.UpdateShardCountInput{
 						StreamName:       &streamName,
 						TargetShardCount: aws.Int64(count),

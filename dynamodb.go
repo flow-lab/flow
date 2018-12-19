@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/urfave/cli"
 	"io/ioutil"
@@ -57,9 +56,7 @@ var dynamodbCommand = func() cli.Command {
 					}
 					sess := NewSessionWithSharedProfile(profile)
 
-					ddbc := dynamodb.New(sess, &aws.Config{
-						Region: aws.String(endpoints.EuWest1RegionID),
-					})
+					ddbc := dynamodb.New(sess)
 
 					input := &dynamodb.DescribeTableInput{
 						TableName: aws.String(tableName),
@@ -210,9 +207,7 @@ var dynamodbCommand = func() cli.Command {
 
 					sess := NewSessionWithSharedProfile(profile)
 
-					ddbc := dynamodb.New(sess, &aws.Config{
-						Region: aws.String(endpoints.EuWest1RegionID),
-					})
+					ddbc := dynamodb.New(sess)
 
 					var input *dynamodb.UpdateTableInput
 
@@ -273,9 +268,7 @@ var dynamodbCommand = func() cli.Command {
 
 					sess := NewSessionWithSharedProfile(profile)
 
-					ddbc := dynamodb.New(sess, &aws.Config{
-						Region: aws.String(endpoints.EuWest1RegionID),
-					})
+					ddbc := dynamodb.New(sess)
 
 					input := dynamodb.DescribeTableInput{
 						TableName: &tableName,
@@ -310,9 +303,7 @@ var dynamodbCommand = func() cli.Command {
 
 					sess := NewSessionWithSharedProfile(profile)
 
-					ddbc := dynamodb.New(sess, &aws.Config{
-						Region: aws.String(endpoints.EuWest1RegionID),
-					})
+					ddbc := dynamodb.New(sess)
 
 					params := dynamodb.ScanInput{
 						TableName: &tableName,
@@ -377,9 +368,7 @@ var dynamodbCommand = func() cli.Command {
 
 					sess := NewSessionWithSharedProfile(profile)
 
-					ddbc := dynamodb.New(sess, &aws.Config{
-						Region: aws.String(endpoints.EuWest1RegionID),
-					})
+					ddbc := dynamodb.New(sess)
 
 					var batches [][]map[string]*dynamodb.AttributeValue
 					batchSize := 25
@@ -471,9 +460,7 @@ var dynamodbCommand = func() cli.Command {
 
 					sess := NewSessionWithSharedProfile(profile)
 
-					ddbc := dynamodb.New(sess, &aws.Config{
-						Region: aws.String(endpoints.EuWest1RegionID),
-					})
+					ddbc := dynamodb.New(sess)
 
 					var batches [][]map[string]*dynamodb.AttributeValue
 					batchSize := 25
@@ -577,9 +564,7 @@ var dynamodbCommand = func() cli.Command {
 					}
 
 					sess := NewSessionWithSharedProfile(profile)
-					ddbc := dynamodb.New(sess, &aws.Config{
-						Region: aws.String(endpoints.EuWest1RegionID),
-					})
+					ddbc := dynamodb.New(sess)
 
 					var shouldWriteToFile bool
 					if fileName != "" {
@@ -718,9 +703,7 @@ var dynamodbCommand = func() cli.Command {
 
 					sess := NewSessionWithSharedProfile(profile)
 
-					ddbc := dynamodb.New(sess, &aws.Config{
-						Region: aws.String(endpoints.EuWest1RegionID),
-					})
+					ddbc := dynamodb.New(sess)
 
 					input := dynamodb.RestoreTableToPointInTimeInput{
 						SourceTableName: &sourceTableName,
@@ -781,9 +764,7 @@ var dynamodbCommand = func() cli.Command {
 					fileName := c.String("file-name")
 					sess := NewSessionWithSharedProfile(profile)
 
-					ddbc := dynamodb.New(sess, &aws.Config{
-						Region: aws.String(endpoints.EuWest1RegionID),
-					})
+					ddbc := dynamodb.New(sess)
 
 					params := dynamodb.ScanInput{
 						TableName: &tableName,
@@ -917,9 +898,7 @@ var dynamodbCommand = func() cli.Command {
 
 					sess := NewSessionWithSharedProfile(profile)
 
-					ddbc := dynamodb.New(sess, &aws.Config{
-						Region: aws.String(endpoints.EuWest1RegionID),
-					})
+					ddbc := dynamodb.New(sess)
 
 					listBackupsInput := &dynamodb.ListBackupsInput{
 						TableName: &tableName,

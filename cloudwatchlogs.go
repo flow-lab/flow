@@ -1,14 +1,13 @@
 package main
 
 import (
-	"github.com/urfave/cli"
-	"strconv"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
-	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
-	"fmt"
-	"io/ioutil"
 	"encoding/json"
+	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
+	"github.com/urfave/cli"
+	"io/ioutil"
+	"strconv"
 )
 
 var cloudwatchlogsCommand = func() cli.Command {
@@ -42,9 +41,7 @@ var cloudwatchlogsCommand = func() cli.Command {
 					}
 					sess := NewSessionWithSharedProfile(profile)
 
-					cwlc := cloudwatchlogs.New(sess, &aws.Config{
-						Region: aws.String(endpoints.EuWest1RegionID),
-					})
+					cwlc := cloudwatchlogs.New(sess)
 
 					params := cloudwatchlogs.PutRetentionPolicyInput{
 						LogGroupName:    &logGroupName,
@@ -91,9 +88,7 @@ var cloudwatchlogsCommand = func() cli.Command {
 
 					sess := NewSessionWithSharedProfile(profile)
 
-					cwlc := cloudwatchlogs.New(sess, &aws.Config{
-						Region: aws.String(endpoints.EuWest1RegionID),
-					})
+					cwlc := cloudwatchlogs.New(sess)
 
 					params := cloudwatchlogs.FilterLogEventsInput{
 						LogGroupName:  &logGroupName,

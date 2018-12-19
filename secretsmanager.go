@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/urfave/cli"
 	"io/ioutil"
@@ -52,9 +51,7 @@ var secretsmanagerCommand = func() cli.Command {
 
 					sess := NewSessionWithSharedProfile(profile)
 
-					ssmc := secretsmanager.New(sess, &aws.Config{
-						Region: aws.String(endpoints.EuWest1RegionID),
-					})
+					ssmc := secretsmanager.New(sess)
 
 					listSecretsInput := secretsmanager.ListSecretsInput{}
 					var entries []*SecretOutput
@@ -101,9 +98,7 @@ var secretsmanagerCommand = func() cli.Command {
 					profile := c.String("profile")
 					sess := NewSessionWithSharedProfile(profile)
 
-					ssmc := secretsmanager.New(sess, &aws.Config{
-						Region: aws.String(endpoints.EuWest1RegionID),
-					})
+					ssmc := secretsmanager.New(sess)
 
 					listSecretsInput := secretsmanager.ListSecretsInput{}
 					ssmc.ListSecretsPages(&listSecretsInput, func(output *secretsmanager.ListSecretsOutput, lastPage bool) bool {
@@ -148,9 +143,7 @@ var secretsmanagerCommand = func() cli.Command {
 					}
 					defer jsonFile.Close()
 
-					ssmc := secretsmanager.New(sess, &aws.Config{
-						Region: aws.String(endpoints.EuWest1RegionID),
-					})
+					ssmc := secretsmanager.New(sess)
 
 					var secrets []*Secret
 					byteValue, _ := ioutil.ReadAll(jsonFile)

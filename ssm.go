@@ -3,8 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/urfave/cli"
 	"io/ioutil"
@@ -37,9 +35,7 @@ var ssmCommand = func() cli.Command {
 					outFileName := c.String("output-file-name")
 					sess := NewSessionWithSharedProfile(profile)
 
-					ssmc := ssm.New(sess, &aws.Config{
-						Region: aws.String(endpoints.EuWest1RegionID),
-					})
+					ssmc := ssm.New(sess)
 
 					listTopicsParams := ssm.DescribeParametersInput{}
 					var parameters []Parameter

@@ -1,15 +1,13 @@
 package main
 
 import (
+	"fmt"
+	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/urfave/cli"
 	"strconv"
 	"strings"
-	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
-	"github.com/aws/aws-sdk-go/service/sns"
-	"time"
 	"sync"
+	"time"
 )
 
 var snsCommand = func() cli.Command {
@@ -54,9 +52,7 @@ var snsCommand = func() cli.Command {
 					}
 					sess := NewSessionWithSharedProfile(profile)
 
-					sqsc := sns.New(sess, &aws.Config{
-						Region: aws.String(endpoints.EuWest1RegionID),
-					})
+					sqsc := sns.New(sess)
 
 					var wg sync.WaitGroup
 					listTopicsParams := sns.ListTopicsInput{}

@@ -84,7 +84,7 @@ OPTIONS:
 
 ## authentication
 
-Flow will authenticate using the same methods defined by [aws-cli][auth].
+Flow will be configured and will authenticate using the same methods defined by [aws-cli][auth].
 
 Currently it supports authentication with:
 

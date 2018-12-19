@@ -1,11 +1,9 @@
 package main
 
 import (
-	"github.com/urfave/cli"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"fmt"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
+	"github.com/urfave/cli"
 )
 
 var cloudwatchCommand = func() cli.Command {
@@ -32,9 +30,7 @@ var cloudwatchCommand = func() cli.Command {
 					}
 					sess := NewSessionWithSharedProfile(profile)
 
-					cwlc := cloudwatch.New(sess, &aws.Config{
-						Region: aws.String(endpoints.EuWest1RegionID),
-					})
+					cwlc := cloudwatch.New(sess)
 
 					params := cloudwatch.DeleteAlarmsInput{
 						AlarmNames: alarmNames,
