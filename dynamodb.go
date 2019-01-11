@@ -942,10 +942,6 @@ var dynamodbCommand = func() cli.Command {
 								return err
 							}
 
-							if listBackupsOutput.LastEvaluatedBackupArn == nil {
-								break
-							}
-
 							for _, bs := range listBackupsOutput.BackupSummaries {
 								deleteBackupInput := &dynamodb.DeleteBackupInput{
 									BackupArn: bs.BackupArn,
@@ -957,6 +953,10 @@ var dynamodbCommand = func() cli.Command {
 								//we need to sleep a bit, max 10 times per second
 								time.Sleep(time.Duration(100) * time.Millisecond)
 								fmt.Printf("deleted: %v \n", *output.BackupDescription.BackupDetails)
+							}
+
+							if listBackupsOutput.LastEvaluatedBackupArn == nil {
+								break
 							}
 						}
 					}
