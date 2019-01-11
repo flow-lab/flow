@@ -1,19 +1,32 @@
 #!/bin/sh
-set -e
+set -ex
+
+# I am fetching flow from github releases.
+#
+# To install latest version:
+# ./get-flow.sh
+#
+# To install by specific version:
+# ./get-flow.sh v0.1.50
 
 TAR_FILE="flow.tar.gz"
 RELEASES_URL="https://github.com/flow-lab/flow/releases"
 DEST="."
 
-last_version() {
-  curl -sL -o /dev/null -w %{url_effective} "$RELEASES_URL/latest" |
+SEM_VERSION="latest"
+if [[ ! -z "$1" ]]; then
+  SEM_VERSION="$1"
+fi
+
+get_version() {
+  curl --fail -sL -o /dev/null -w %{url_effective} "$RELEASES_URL/$SEM_VERSION" |
     rev |
     cut -f1 -d'/'|
     rev
 }
 
 download() {
-  test -z "$VERSION" && VERSION="$(last_version)"
+  test -z "$VERSION" && VERSION="$(get_version)"
   test -z "$VERSION" && {
     echo "Unable to get flow version." >&2
     exit 1
