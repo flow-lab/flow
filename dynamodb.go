@@ -4,15 +4,16 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/urfave/cli"
 	"io/ioutil"
 	"os"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/urfave/cli"
 )
 
 var dynamodbCommand = func() cli.Command {
@@ -149,7 +150,7 @@ var dynamodbCommand = func() cli.Command {
 						cpy := make([]map[string]*dynamodb.AttributeValue, len(output.Items))
 						copy(cpy, output.Items)
 						go purge(cpy, pageNr, &wg)
-						pageNr += 1
+						pageNr++
 
 						if pageNr%maxConcurrent == 0 {
 							wg.Wait()
@@ -716,9 +717,8 @@ var dynamodbCommand = func() cli.Command {
 					if err != nil {
 						if aerr, ok := err.(awserr.Error); ok {
 							return aerr
-						} else {
-							return err
 						}
+						return err
 					}
 
 					fmt.Printf("result: %v", result)
@@ -871,19 +871,29 @@ var dynamodbCommand = func() cli.Command {
 						Name:  "profile",
 						Value: "",
 					},
-					cli.StringFlag{
-						Name:  "table-name",
-						Value: "",
+					cli.StringSliceFlag{
+						Name: "table-name",
 					},
 					cli.StringFlag{
 						Name:  "until-date",
 						Value: "",
+						Usage: "all backups created before this date",
+					},
+					cli.StringFlag{
+						Name:  "older-than",
+						Value: "",
+						Usage: "backup age in days",
 					},
 				},
 				Action: func(c *cli.Context) error {
 					profile := c.String("profile")
-					tableName := c.String("table-name")
+					tableNames := c.StringSlice("table-name")
 					untilDateStr := c.String("until-date")
+					olderThanDays := c.String("older-than")
+
+					if olderThanDays != "" && untilDateStr != "" {
+						return fmt.Errorf("only one of paramters --until-date, --older-than can be provided")
+					}
 
 					var t time.Time
 					if untilDateStr == "" {
@@ -896,31 +906,40 @@ var dynamodbCommand = func() cli.Command {
 						}
 					}
 
-					sess := NewSessionWithSharedProfile(profile)
+					if olderThanDays != "" {
+						days, err := strconv.Atoi(olderThanDays)
+						if err != nil {
+							return err
+						}
+						t = t.AddDate(0, 0, -days)
+					}
 
+					sess := NewSessionWithSharedProfile(profile)
 					ddbc := dynamodb.New(sess)
 
-					listBackupsInput := &dynamodb.ListBackupsInput{
-						TableName: &tableName,
-					}
+					for _, tableName := range tableNames {
+						listBackupsInput := &dynamodb.ListBackupsInput{
+							TableName: &tableName,
+						}
 
-					listBackupsOutput, err := ddbc.ListBackups(listBackupsInput)
-					if err != nil {
-						return err
-					}
+						listBackupsOutput, err := ddbc.ListBackups(listBackupsInput)
+						if err != nil {
+							return err
+						}
 
-					for _, bs := range listBackupsOutput.BackupSummaries {
-						if bs.BackupCreationDateTime.Before(t) {
-							deleteBackupInput := &dynamodb.DeleteBackupInput{
-								BackupArn: bs.BackupArn,
+						for _, bs := range listBackupsOutput.BackupSummaries {
+							if bs.BackupCreationDateTime.Before(t) {
+								deleteBackupInput := &dynamodb.DeleteBackupInput{
+									BackupArn: bs.BackupArn,
+								}
+								output, err := ddbc.DeleteBackup(deleteBackupInput)
+								if err != nil {
+									panic(err)
+								}
+								// we need to sleep a bit, max 10 times per second
+								time.Sleep(time.Duration(100) * time.Millisecond)
+								fmt.Printf("deleted: %v \n", *output.BackupDescription.BackupDetails)
 							}
-							output, err := ddbc.DeleteBackup(deleteBackupInput)
-							if err != nil {
-								panic(err)
-							}
-							// we need to sleep a bit, max 10 times per second
-							time.Sleep(time.Duration(100) * time.Millisecond)
-							fmt.Printf("deleted: %v \n", *output.BackupDescription.BackupDetails)
 						}
 					}
 

@@ -2,15 +2,16 @@ package main
 
 import (
 	"fmt"
-	"github.com/urfave/cli"
 	"log"
 	"os"
+
+	"github.com/urfave/cli"
 )
 
 func main() {
 	app := cli.NewApp()
 	app.Name = "development tooling for AWS"
-	app.Version = "0.1.48"
+	app.Version = "0.1.49"
 
 	app.Commands = []cli.Command{
 		dynamodbCommand(),
