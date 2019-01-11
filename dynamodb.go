@@ -875,32 +875,38 @@ var dynamodbCommand = func() cli.Command {
 						Name: "table-name",
 					},
 					cli.StringFlag{
-						Name:  "until-date",
+						Name:  "time-range-upper-bound",
 						Value: "",
-						Usage: "all backups created before this date",
+						Usage: "only backups created before this time will be deleted. It is exclusive",
 					},
 					cli.StringFlag{
 						Name:  "older-than",
 						Value: "",
-						Usage: "backup age in days",
+						Usage: "age in days",
+					},
+					cli.StringFlag{
+						Name:  "backup-type",
+						Value: "USER",
+						Usage: "USER, SYSTEM or ALL",
 					},
 				},
 				Action: func(c *cli.Context) error {
 					profile := c.String("profile")
 					tableNames := c.StringSlice("table-name")
-					untilDateStr := c.String("until-date")
+					timeRangeUpperBound := c.String("time-range-upper-bound")
 					olderThanDays := c.String("older-than")
+					backupType := c.String("backup-type")
 
-					if olderThanDays != "" && untilDateStr != "" {
-						return fmt.Errorf("only one of paramters --until-date, --older-than can be provided")
+					if olderThanDays != "" && timeRangeUpperBound != "" {
+						return fmt.Errorf("only one of paramters --time-range-upper-bound, --older-than can be provided")
 					}
 
 					var t time.Time
-					if untilDateStr == "" {
+					if timeRangeUpperBound == "" {
 						t = time.Now()
 					} else {
 						var err error
-						t, err = time.Parse(time.RFC3339, untilDateStr)
+						t, err = time.Parse(time.RFC3339, timeRangeUpperBound)
 						if err != nil {
 							return err
 						}
@@ -918,17 +924,29 @@ var dynamodbCommand = func() cli.Command {
 					ddbc := dynamodb.New(sess)
 
 					for _, tableName := range tableNames {
-						listBackupsInput := &dynamodb.ListBackupsInput{
-							TableName: &tableName,
-						}
+						var listBackupsOutput *dynamodb.ListBackupsOutput
+						for {
+							listBackupsInput := &dynamodb.ListBackupsInput{
+								TableName:           &tableName,
+								TimeRangeUpperBound: &t,
+								BackupType:          &backupType,
+							}
 
-						listBackupsOutput, err := ddbc.ListBackups(listBackupsInput)
-						if err != nil {
-							return err
-						}
+							if listBackupsOutput != nil {
+								listBackupsInput.ExclusiveStartBackupArn = listBackupsOutput.LastEvaluatedBackupArn
+							}
 
-						for _, bs := range listBackupsOutput.BackupSummaries {
-							if bs.BackupCreationDateTime.Before(t) {
+							var err error
+							listBackupsOutput, err = ddbc.ListBackups(listBackupsInput)
+							if err != nil {
+								return err
+							}
+
+							if listBackupsOutput.LastEvaluatedBackupArn == nil {
+								break
+							}
+
+							for _, bs := range listBackupsOutput.BackupSummaries {
 								deleteBackupInput := &dynamodb.DeleteBackupInput{
 									BackupArn: bs.BackupArn,
 								}
@@ -936,7 +954,7 @@ var dynamodbCommand = func() cli.Command {
 								if err != nil {
 									panic(err)
 								}
-								// we need to sleep a bit, max 10 times per second
+								//we need to sleep a bit, max 10 times per second
 								time.Sleep(time.Duration(100) * time.Millisecond)
 								fmt.Printf("deleted: %v \n", *output.BackupDescription.BackupDetails)
 							}
