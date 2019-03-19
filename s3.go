@@ -39,17 +39,26 @@ var s3Command = func() cli.Command {
 						Bucket: aws.String(bucketName),
 					}
 					err := s3c.ListObjectVersionsPages(&input, func(output *s3.ListObjectVersionsOutput, b bool) bool {
+						var objectIdentifiers []*s3.ObjectIdentifier
 						for _, version := range output.Versions {
-							deleteObjectInput := s3.DeleteObjectInput{
+							objectIdentifiers = append(objectIdentifiers, &s3.ObjectIdentifier{
+								Key:       version.Key,
+								VersionId: version.VersionId,
+							})
+						}
+
+						if len(objectIdentifiers) > 0 {
+							deleteObjectsInput := s3.DeleteObjectsInput{
 								Bucket: output.Name,
-								Key:    version.Key,
+								Delete: &s3.Delete{
+									Objects: objectIdentifiers,
+								},
 							}
-							_, err := s3c.DeleteObject(&deleteObjectInput)
+							_, err := s3c.DeleteObjects(&deleteObjectsInput)
 							if err != nil {
 								panic(err)
 							}
-							o := fmt.Sprintf("%s/%s\n", *output.Name, *version.Key)
-							fmt.Printf("deleted key: %v", o)
+							fmt.Printf("deleted: %v\n", objectIdentifiers)
 						}
 
 						return output.NextKeyMarker != nil
