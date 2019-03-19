@@ -348,7 +348,7 @@ var dynamodbCommand = func() cli.Command {
 					var items []map[string]*dynamodb.AttributeValue
 
 					if tableName == "" {
-						return fmt.Errorf("missing --tableName parameter")
+						return fmt.Errorf("missing --table-name parameter")
 					}
 					if input == "" {
 						return fmt.Errorf("missing --input parameter")
@@ -440,7 +440,7 @@ var dynamodbCommand = func() cli.Command {
 					var items []map[string]*dynamodb.AttributeValue
 
 					if tableName == "" {
-						return fmt.Errorf("missing --tableName parameter")
+						return fmt.Errorf("missing --table-name parameter")
 					}
 					if keys == "" {
 						return fmt.Errorf("missing --keys parameter")
@@ -545,7 +545,7 @@ var dynamodbCommand = func() cli.Command {
 					var items []map[string]*dynamodb.AttributeValue
 
 					if tableName == "" {
-						return fmt.Errorf("missing --tableName parameter")
+						return fmt.Errorf("missing --table-name parameter")
 					}
 					if keys == "" {
 						return fmt.Errorf("missing --keys parameter")
