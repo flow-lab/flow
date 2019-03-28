@@ -47,6 +47,13 @@ var s3Command = func() cli.Command {
 							})
 						}
 
+						for _, deleteMarker := range output.DeleteMarkers {
+							objectIdentifiers = append(objectIdentifiers, &s3.ObjectIdentifier{
+								Key:       deleteMarker.Key,
+								VersionId: deleteMarker.VersionId,
+							})
+						}
+
 						if len(objectIdentifiers) > 0 {
 							deleteObjectsInput := s3.DeleteObjectsInput{
 								Bucket: output.Name,
