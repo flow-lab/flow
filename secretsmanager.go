@@ -33,6 +33,42 @@ var secretsmanagerCommand = func() cli.Command {
 		Name: "secretsmanager",
 		Subcommands: []cli.Command{
 			{
+				Name:        "get-secret-value",
+				Description: "Gets secret value",
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name: "secret-id",
+					},
+					cli.StringFlag{
+						Name:  "profile",
+						Value: "",
+					},
+				},
+				Action: func(c *cli.Context) error {
+					secretId := c.String("secret-id")
+					profile := c.String("profile")
+
+					if secretId == "" {
+						return fmt.Errorf("secred-id is required")
+					}
+
+					sess := NewSessionWithSharedProfile(profile)
+					ssmc := secretsmanager.New(sess)
+
+					getSecretValueInput := secretsmanager.GetSecretValueInput{
+						SecretId: aws.String(secretId),
+					}
+					getSecretValueOutput, err := ssmc.GetSecretValue(&getSecretValueInput)
+					if err != nil {
+						panic(err)
+					}
+
+					fmt.Printf("%v", getSecretValueOutput)
+
+					return nil
+				},
+			},
+			{
 				Name:  "export",
 				Usage: "exports secrets and their values to json",
 				Flags: []cli.Flag{
@@ -55,7 +91,7 @@ var secretsmanagerCommand = func() cli.Command {
 
 					listSecretsInput := secretsmanager.ListSecretsInput{}
 					var entries []*SecretOutput
-					ssmc.ListSecretsPages(&listSecretsInput, func(output *secretsmanager.ListSecretsOutput, lastPage bool) bool {
+					err := ssmc.ListSecretsPages(&listSecretsInput, func(output *secretsmanager.ListSecretsOutput, lastPage bool) bool {
 						for _, elem := range output.SecretList {
 							getSecretValueInput := secretsmanager.GetSecretValueInput{
 								SecretId: elem.ARN,
@@ -72,6 +108,10 @@ var secretsmanagerCommand = func() cli.Command {
 						}
 						return lastPage == false
 					})
+
+					if err != nil {
+						panic(err)
+					}
 
 					if entries == nil {
 						fmt.Println("no secrets found")
@@ -101,7 +141,7 @@ var secretsmanagerCommand = func() cli.Command {
 					ssmc := secretsmanager.New(sess)
 
 					listSecretsInput := secretsmanager.ListSecretsInput{}
-					ssmc.ListSecretsPages(&listSecretsInput, func(output *secretsmanager.ListSecretsOutput, lastPage bool) bool {
+					err := ssmc.ListSecretsPages(&listSecretsInput, func(output *secretsmanager.ListSecretsOutput, lastPage bool) bool {
 						for _, elem := range output.SecretList {
 
 							deleteSecretInput := secretsmanager.DeleteSecretInput{
@@ -115,6 +155,11 @@ var secretsmanagerCommand = func() cli.Command {
 						}
 						return lastPage == false
 					})
+
+					if err != nil {
+						panic(err)
+					}
+
 					return nil
 				},
 			},
