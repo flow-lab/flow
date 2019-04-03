@@ -67,7 +67,7 @@ var apiGateway = func() cli.Command {
 								}
 
 								var destFileName string
-								name := strings.ReplaceAll(*restAPI.Name, " ", "")
+								name := strings.Replace(*restAPI.Name, " ", "", -1)
 								if restAPI.Version != nil {
 									destFileName = fmt.Sprintf("%s-%s.oas3.yml", name, *restAPI.Version)
 								} else {
