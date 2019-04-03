@@ -24,6 +24,7 @@ func main() {
 		kinesisCommand(),
 		base64Command(),
 		s3Command(),
+		apiGateway(),
 	}
 
 	app.Action = func(c *cli.Context) error {
