@@ -11,7 +11,7 @@ import (
 func main() {
 	app := cli.NewApp()
 	app.Name = "development tooling for AWS"
-	app.Version = "0.1.53"
+	app.Version = "0.1.54"
 
 	app.Commands = []cli.Command{
 		dynamodbCommand(),
@@ -25,6 +25,7 @@ func main() {
 		base64Command(),
 		s3Command(),
 		apiGateway(),
+		kafkaCommand(),
 	}
 
 	app.Action = func(c *cli.Context) error {
