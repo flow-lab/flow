@@ -11,7 +11,7 @@ import (
 func main() {
 	app := cli.NewApp()
 	app.Name = "development tooling for AWS"
-	app.Version = "0.1.54"
+	app.Version = "0.1.55"
 
 	app.Commands = []cli.Command{
 		dynamodbCommand(),
