@@ -2110,6 +2110,11 @@ func main() {
 								Value: "",
 							},
 							cli.StringFlag{
+								Name:  "filter",
+								Value: "",
+								Usage: "delete only objects matching filter",
+							},
+							cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
@@ -2117,6 +2122,7 @@ func main() {
 						Action: func(c *cli.Context) error {
 							profile := c.String("profile")
 							bucketName := c.String("bucket-name")
+							filter := c.String("filter")
 
 							if bucketName == "" {
 								return fmt.Errorf("missing --bucket-name parameter")
@@ -2131,17 +2137,35 @@ func main() {
 							err := s3c.ListObjectVersionsPages(&input, func(output *s3.ListObjectVersionsOutput, b bool) bool {
 								var objectIdentifiers []*s3.ObjectIdentifier
 								for _, version := range output.Versions {
-									objectIdentifiers = append(objectIdentifiers, &s3.ObjectIdentifier{
-										Key:       version.Key,
-										VersionId: version.VersionId,
-									})
+									if filter != "" {
+										if strings.Contains(*version.Key, filter) {
+											objectIdentifiers = append(objectIdentifiers, &s3.ObjectIdentifier{
+												Key:       version.Key,
+												VersionId: version.VersionId,
+											})
+										}
+									} else {
+										objectIdentifiers = append(objectIdentifiers, &s3.ObjectIdentifier{
+											Key:       version.Key,
+											VersionId: version.VersionId,
+										})
+									}
 								}
 
 								for _, deleteMarker := range output.DeleteMarkers {
-									objectIdentifiers = append(objectIdentifiers, &s3.ObjectIdentifier{
-										Key:       deleteMarker.Key,
-										VersionId: deleteMarker.VersionId,
-									})
+									if filter != "" {
+										if strings.Contains(*deleteMarker.Key, filter) {
+											objectIdentifiers = append(objectIdentifiers, &s3.ObjectIdentifier{
+												Key:       deleteMarker.Key,
+												VersionId: deleteMarker.VersionId,
+											})
+										}
+									} else {
+										objectIdentifiers = append(objectIdentifiers, &s3.ObjectIdentifier{
+											Key:       deleteMarker.Key,
+											VersionId: deleteMarker.VersionId,
+										})
+									}
 								}
 
 								if len(objectIdentifiers) > 0 {
