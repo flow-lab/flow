@@ -1,8 +1,8 @@
 package main
 
 import (
-	"encoding/base64"
 	"fmt"
+	"github.com/flow-lab/flow/pkg/base64"
 	"github.com/urfave/cli"
 )
 
@@ -22,14 +22,13 @@ var base64Command = func() cli.Command {
 				},
 				Action: func(c *cli.Context) error {
 					input := c.String("input")
-
 					if input == "" {
 						return fmt.Errorf("missing --input")
 					}
 
-					dst := make([]byte, base64.StdEncoding.EncodedLen(len(input)))
-					base64.StdEncoding.Encode(dst, []byte(input))
-					fmt.Println(string(dst))
+					encode := base64.Encode(input)
+					fmt.Println(string(encode))
+
 					return nil
 				},
 			},
@@ -44,14 +43,16 @@ var base64Command = func() cli.Command {
 				},
 				Action: func(c *cli.Context) error {
 					input := c.String("input")
-
 					if input == "" {
 						return fmt.Errorf("missing --input")
 					}
 
-					dst := make([]byte, base64.StdEncoding.DecodedLen(len(input)))
-					base64.StdEncoding.Decode(dst, []byte(input))
-					fmt.Println(string(dst))
+					bytes, err := base64.Decode(input)
+					if err != nil {
+						return fmt.Errorf("call to Decode failed: %s", err)
+					}
+					fmt.Println(string(bytes))
+
 					return nil
 				},
 			},
