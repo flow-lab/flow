@@ -1570,6 +1570,46 @@ func main() {
 							return nil
 						},
 					},
+					{
+						Name:  "describe",
+						Usage: "describe log groups",
+						Flags: []cli.Flag{
+							cli.StringFlag{
+								Name:  "log-group-name-prefix",
+								Value: "",
+							},
+							cli.StringFlag{
+								Name:  "profile",
+								Value: "",
+							},
+						},
+						Action: func(c *cli.Context) error {
+							profile := c.String("profile")
+							logGroupNamePrefix := c.String("log-group-name-prefix")
+							sess := session.NewSessionWithSharedProfile(profile)
+							cwlc := cloudwatchlogs.New(sess)
+
+							input := &cloudwatchlogs.DescribeLogGroupsInput{}
+
+							if logGroupNamePrefix != "" {
+								input.LogGroupNamePrefix = &logGroupNamePrefix
+							}
+
+							err := cwlc.DescribeLogGroupsPages(input, func(output *cloudwatchlogs.DescribeLogGroupsOutput, lastPage bool) bool {
+								for _, lg := range output.LogGroups {
+									bytes, err := json.Marshal(lg)
+									if err != nil {
+										panic(err)
+									}
+
+									fmt.Println(string(bytes))
+								}
+								return lastPage == false
+							})
+
+							return err
+						},
+					},
 				},
 			}
 		}(),
