@@ -1,12 +1,13 @@
-package main
+package session
 
 import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
+	"github.com/aws/aws-sdk-go/aws/session"
 )
 
+// SessionBuilder for building a session
 type SessionBuilder interface {
 	Config(*aws.Config) SessionBuilder
 	Profile(string) SessionBuilder

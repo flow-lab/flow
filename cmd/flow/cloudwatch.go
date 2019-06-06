@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
+	"github.com/flow-lab/flow/pkg/session"
 	"github.com/urfave/cli"
 )
 
@@ -28,7 +29,7 @@ var cloudwatchCommand = func() cli.Command {
 					for _, elem := range c.StringSlice("name") {
 						alarmNames = append(alarmNames, &elem)
 					}
-					sess := NewSessionWithSharedProfile(profile)
+					sess := session.NewSessionWithSharedProfile(profile)
 
 					cwlc := cloudwatch.New(sess)
 

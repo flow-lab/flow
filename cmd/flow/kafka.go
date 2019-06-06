@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/service/kafka"
+	"github.com/flow-lab/flow/pkg/session"
 	"github.com/urfave/cli"
 )
 
@@ -21,7 +22,7 @@ var kafkaCommand = func() cli.Command {
 				},
 				Action: func(c *cli.Context) error {
 					profile := c.String("profile")
-					sess := NewSessionWithSharedProfile(profile)
+					sess := session.NewSessionWithSharedProfile(profile)
 					kc := kafka.New(sess)
 
 					listClusterInput := kafka.ListClustersInput{}
@@ -54,7 +55,7 @@ var kafkaCommand = func() cli.Command {
 				Action: func(c *cli.Context) error {
 					profile := c.String("profile")
 					clusterName := c.String("cluster-name")
-					sess := NewSessionWithSharedProfile(profile)
+					sess := session.NewSessionWithSharedProfile(profile)
 					kc := kafka.New(sess)
 
 					clusterArn, err := getClusterArn(clusterName, kc)
@@ -92,7 +93,7 @@ var kafkaCommand = func() cli.Command {
 				Action: func(c *cli.Context) error {
 					profile := c.String("profile")
 					clusterName := c.String("cluster-name")
-					sess := NewSessionWithSharedProfile(profile)
+					sess := session.NewSessionWithSharedProfile(profile)
 					kc := kafka.New(sess)
 
 					clusterArn, err := getClusterArn(clusterName, kc)

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/flow-lab/flow/pkg/session"
 	"github.com/urfave/cli"
 	"io/ioutil"
 	"os"
@@ -30,7 +31,7 @@ var sqsCommand = func() cli.Command {
 				Action: func(c *cli.Context) error {
 					profile := c.String("profile")
 					queueName := c.String("queue-name")
-					sess := NewSessionWithSharedProfile(profile)
+					sess := session.NewSessionWithSharedProfile(profile)
 
 					sqsc := sqs.New(sess)
 
@@ -84,7 +85,7 @@ var sqsCommand = func() cli.Command {
 						return fmt.Errorf("input-file-name not found")
 					}
 					msgAttributes := c.String("message-attributes")
-					sess := NewSessionWithSharedProfile(profile)
+					sess := session.NewSessionWithSharedProfile(profile)
 
 					jsonFile, err := os.Open(inFileName)
 					if err != nil {
@@ -158,7 +159,7 @@ var sqsCommand = func() cli.Command {
 						attributeNames = append(attributeNames, &elem)
 					}
 
-					sess := NewSessionWithSharedProfile(profile)
+					sess := session.NewSessionWithSharedProfile(profile)
 
 					sqsc := sqs.New(sess)
 
@@ -201,7 +202,7 @@ var sqsCommand = func() cli.Command {
 				Action: func(c *cli.Context) error {
 					profile := c.String("profile")
 					queueName := c.String("queue-name")
-					sess := NewSessionWithSharedProfile(profile)
+					sess := session.NewSessionWithSharedProfile(profile)
 
 					sqsc := sqs.New(sess)
 

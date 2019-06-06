@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
+	"github.com/flow-lab/flow/pkg/session"
 	"github.com/urfave/cli"
 	"io/ioutil"
 	"strconv"
@@ -39,7 +40,7 @@ var cloudwatchlogsCommand = func() cli.Command {
 					if err != nil {
 						return err
 					}
-					sess := NewSessionWithSharedProfile(profile)
+					sess := session.NewSessionWithSharedProfile(profile)
 
 					cwlc := cloudwatchlogs.New(sess)
 
@@ -86,7 +87,7 @@ var cloudwatchlogsCommand = func() cli.Command {
 					fileName := c.String("file-name")
 					filterPattern := c.String("filter-pattern")
 
-					sess := NewSessionWithSharedProfile(profile)
+					sess := session.NewSessionWithSharedProfile(profile)
 
 					cwlc := cloudwatchlogs.New(sess)
 
@@ -142,7 +143,7 @@ var cloudwatchlogsCommand = func() cli.Command {
 						return fmt.Errorf("filter-name is required")
 					}
 
-					sess := NewSessionWithSharedProfile(profile)
+					sess := session.NewSessionWithSharedProfile(profile)
 					cwlc := cloudwatchlogs.New(sess)
 
 					params := cloudwatchlogs.DeleteSubscriptionFilterInput{
@@ -178,7 +179,7 @@ var cloudwatchlogsCommand = func() cli.Command {
 					}
 					profile := c.String("profile")
 
-					sess := NewSessionWithSharedProfile(profile)
+					sess := session.NewSessionWithSharedProfile(profile)
 					cwlc := cloudwatchlogs.New(sess)
 
 					describeSubscriptionFiltersInput := cloudwatchlogs.DescribeSubscriptionFiltersInput{

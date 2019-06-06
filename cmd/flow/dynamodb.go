@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"github.com/flow-lab/flow/pkg/session"
 	"io/ioutil"
 	"os"
 	"strconv"
@@ -55,7 +56,7 @@ var dynamodbCommand = func() cli.Command {
 					if err != nil {
 						return err
 					}
-					sess := NewSessionWithSharedProfile(profile)
+					sess := session.NewSessionWithSharedProfile(profile)
 
 					ddbc := dynamodb.New(sess)
 
@@ -206,7 +207,7 @@ var dynamodbCommand = func() cli.Command {
 						return err
 					}
 
-					sess := NewSessionWithSharedProfile(profile)
+					sess := session.NewSessionWithSharedProfile(profile)
 
 					ddbc := dynamodb.New(sess)
 
@@ -267,7 +268,7 @@ var dynamodbCommand = func() cli.Command {
 					profile := c.String("profile")
 					tableName := c.String("table-name")
 
-					sess := NewSessionWithSharedProfile(profile)
+					sess := session.NewSessionWithSharedProfile(profile)
 
 					ddbc := dynamodb.New(sess)
 
@@ -302,7 +303,7 @@ var dynamodbCommand = func() cli.Command {
 					profile := c.String("profile")
 					tableName := c.String("table-name")
 
-					sess := NewSessionWithSharedProfile(profile)
+					sess := session.NewSessionWithSharedProfile(profile)
 
 					ddbc := dynamodb.New(sess)
 
@@ -367,7 +368,7 @@ var dynamodbCommand = func() cli.Command {
 						return err
 					}
 
-					sess := NewSessionWithSharedProfile(profile)
+					sess := session.NewSessionWithSharedProfile(profile)
 
 					ddbc := dynamodb.New(sess)
 
@@ -459,7 +460,7 @@ var dynamodbCommand = func() cli.Command {
 						return err
 					}
 
-					sess := NewSessionWithSharedProfile(profile)
+					sess := session.NewSessionWithSharedProfile(profile)
 
 					ddbc := dynamodb.New(sess)
 
@@ -564,7 +565,7 @@ var dynamodbCommand = func() cli.Command {
 						return err
 					}
 
-					sess := NewSessionWithSharedProfile(profile)
+					sess := session.NewSessionWithSharedProfile(profile)
 					ddbc := dynamodb.New(sess)
 
 					var shouldWriteToFile bool
@@ -702,7 +703,7 @@ var dynamodbCommand = func() cli.Command {
 					sourceTableName := c.String("source-table-name")
 					targetTableName := c.String("target-table-name")
 
-					sess := NewSessionWithSharedProfile(profile)
+					sess := session.NewSessionWithSharedProfile(profile)
 
 					ddbc := dynamodb.New(sess)
 
@@ -762,7 +763,7 @@ var dynamodbCommand = func() cli.Command {
 					expressionAttributeValues := c.String("expression-attribute-values")
 					projectionExpression := c.String("projection-expression")
 					fileName := c.String("file-name")
-					sess := NewSessionWithSharedProfile(profile)
+					sess := session.NewSessionWithSharedProfile(profile)
 
 					ddbc := dynamodb.New(sess)
 
@@ -920,7 +921,7 @@ var dynamodbCommand = func() cli.Command {
 						t = t.AddDate(0, 0, -days)
 					}
 
-					sess := NewSessionWithSharedProfile(profile)
+					sess := session.NewSessionWithSharedProfile(profile)
 					ddbc := dynamodb.New(sess)
 
 					for _, tableName := range tableNames {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/apigateway"
+	"github.com/flow-lab/flow/pkg/session"
 	"github.com/urfave/cli"
 	"io/ioutil"
 	"strings"
@@ -32,7 +33,7 @@ var apiGateway = func() cli.Command {
 					profile := c.String("profile")
 					fileType := c.String("file-type")
 
-					sess := NewSessionWithSharedProfile(profile)
+					sess := session.NewSessionWithSharedProfile(profile)
 					apig := apigateway.New(sess)
 
 					input := apigateway.GetRestApisInput{}

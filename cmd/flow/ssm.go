@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/flow-lab/flow/pkg/session"
 	"github.com/urfave/cli"
 	"io/ioutil"
 )
@@ -33,7 +34,7 @@ var ssmCommand = func() cli.Command {
 				Action: func(c *cli.Context) error {
 					profile := c.String("profile")
 					outFileName := c.String("output-file-name")
-					sess := NewSessionWithSharedProfile(profile)
+					sess := session.NewSessionWithSharedProfile(profile)
 
 					ssmc := ssm.New(sess)
 

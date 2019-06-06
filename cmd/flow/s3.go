@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/flow-lab/flow/pkg/session"
 	"github.com/urfave/cli"
 )
 
@@ -32,7 +33,7 @@ var s3Command = func() cli.Command {
 						return fmt.Errorf("missing --bucket-name parameter")
 					}
 
-					sess := NewSessionWithSharedProfile(profile)
+					sess := session.NewSessionWithSharedProfile(profile)
 					s3c := s3.New(sess)
 
 					input := s3.ListObjectVersionsInput{

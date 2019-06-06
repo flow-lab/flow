@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/kinesis"
+	"github.com/flow-lab/flow/pkg/session"
 	"github.com/urfave/cli"
 	"strconv"
 )
@@ -37,7 +38,7 @@ var kinesisCommand = func() cli.Command {
 					}
 					profile := c.String("profile")
 
-					sess := NewSessionWithSharedProfile(profile)
+					sess := session.NewSessionWithSharedProfile(profile)
 
 					kinesisc := kinesis.New(sess)
 					updateShardCountInput := kinesis.UpdateShardCountInput{

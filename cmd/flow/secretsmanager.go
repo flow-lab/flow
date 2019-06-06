@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"github.com/flow-lab/flow/pkg/session"
 	"github.com/urfave/cli"
 	"io/ioutil"
 	"os"
@@ -52,7 +53,7 @@ var secretsmanagerCommand = func() cli.Command {
 						return fmt.Errorf("secred-id is required")
 					}
 
-					sess := NewSessionWithSharedProfile(profile)
+					sess := session.NewSessionWithSharedProfile(profile)
 					ssmc := secretsmanager.New(sess)
 
 					getSecretValueInput := secretsmanager.GetSecretValueInput{
@@ -85,7 +86,7 @@ var secretsmanagerCommand = func() cli.Command {
 					profile := c.String("profile")
 					outFileName := c.String("output-file-name")
 
-					sess := NewSessionWithSharedProfile(profile)
+					sess := session.NewSessionWithSharedProfile(profile)
 
 					ssmc := secretsmanager.New(sess)
 
@@ -136,7 +137,7 @@ var secretsmanagerCommand = func() cli.Command {
 				},
 				Action: func(c *cli.Context) error {
 					profile := c.String("profile")
-					sess := NewSessionWithSharedProfile(profile)
+					sess := session.NewSessionWithSharedProfile(profile)
 
 					ssmc := secretsmanager.New(sess)
 
@@ -177,7 +178,7 @@ var secretsmanagerCommand = func() cli.Command {
 				},
 				Action: func(c *cli.Context) error {
 					profile := c.String("profile")
-					sess := NewSessionWithSharedProfile(profile)
+					sess := session.NewSessionWithSharedProfile(profile)
 					inFileName := c.String("input-file-name")
 					if inFileName == "" {
 						return fmt.Errorf("input-file-name not found")
@@ -228,7 +229,7 @@ var secretsmanagerCommand = func() cli.Command {
 						return fmt.Errorf("input-file-name not found")
 					}
 
-					sess := NewSessionWithSharedProfile(profile)
+					sess := session.NewSessionWithSharedProfile(profile)
 
 					jsonFile, err := os.Open(inFileName)
 					if err != nil {
@@ -296,7 +297,7 @@ var secretsmanagerCommand = func() cli.Command {
 						return fmt.Errorf("input-file-name not found")
 					}
 
-					sess := NewSessionWithSharedProfile(profile)
+					sess := session.NewSessionWithSharedProfile(profile)
 
 					jsonFile, err := os.Open(inFileName)
 					if err != nil {

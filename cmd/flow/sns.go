@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/service/sns"
+	"github.com/flow-lab/flow/pkg/session"
 	"github.com/urfave/cli"
 	"strconv"
 	"strings"
@@ -50,7 +51,7 @@ var snsCommand = func() cli.Command {
 					if err != nil {
 						return err
 					}
-					sess := NewSessionWithSharedProfile(profile)
+					sess := session.NewSessionWithSharedProfile(profile)
 
 					sqsc := sns.New(sess)
 

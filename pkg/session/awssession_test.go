@@ -1,22 +1,22 @@
-package main
+package session
 
 import (
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws/session"
-	"os"
-	"github.com/stretchr/testify/assert"
-	"path/filepath"
-	"net/http/httptest"
-	"net/http"
 	"fmt"
-	"time"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/stretchr/testify/assert"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"time"
 )
 
 func setEnv() {
-	os.Setenv("AWS_ACCESS_KEY_ID", "accessKey")
-	os.Setenv("AWS_SECRET_ACCESS_KEY", "secret")
+	_ = os.Setenv("AWS_ACCESS_KEY_ID", "accessKey")
+	_ = os.Setenv("AWS_SECRET_ACCESS_KEY", "secret")
 }
 
 func Test_awsSession(t *testing.T) {
@@ -45,7 +45,7 @@ func Test_awsSession(t *testing.T) {
 			name: "test default shared credentials provider",
 			before: func() {
 				os.Clearenv()
-				os.Setenv("AWS_SHARED_CREDENTIALS_FILE", filepath.Join("testdata", "credentials"))
+				_ = os.Setenv("AWS_SHARED_CREDENTIALS_FILE", filepath.Join("testdata", "credentials"))
 			},
 			after:       os.Clearenv,
 			expectToken: "token",
@@ -61,7 +61,7 @@ func Test_awsSession(t *testing.T) {
 			name: "test default shared credentials provider",
 			before: func() {
 				os.Clearenv()
-				os.Setenv("AWS_SHARED_CREDENTIALS_FILE", filepath.Join("testdata", "credentials"))
+				_ = os.Setenv("AWS_SHARED_CREDENTIALS_FILE", filepath.Join("testdata", "credentials"))
 			},
 			after:       os.Clearenv,
 			expectToken: "token",
@@ -70,7 +70,7 @@ func Test_awsSession(t *testing.T) {
 			name: "test profile with shared credentials provider",
 			before: func() {
 				os.Clearenv()
-				os.Setenv("AWS_SHARED_CREDENTIALS_FILE", filepath.Join("testdata", "credentials"))
+				_ = os.Setenv("AWS_SHARED_CREDENTIALS_FILE", filepath.Join("testdata", "credentials"))
 			},
 			args: args{
 				profile: "no_token",
@@ -126,14 +126,14 @@ const assumeRoleRespMsg = `
 func Test_awsSession_mfa(t *testing.T) {
 	os.Clearenv()
 	defer os.Clearenv()
-	os.Setenv("AWS_SHARED_CREDENTIALS_FILE", filepath.Join("testdata", "credentials"))
-	os.Setenv("AWS_CONFIG_FILE", filepath.Join("testdata", "config"))
+	_ = os.Setenv("AWS_SHARED_CREDENTIALS_FILE", filepath.Join("testdata", "credentials"))
+	_ = os.Setenv("AWS_CONFIG_FILE", filepath.Join("testdata", "config"))
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, r.FormValue("SerialNumber"), "arn:aws:iam::1111111111:mfa/test")
 		assert.Equal(t, r.FormValue("TokenCode"), "tokencode")
 
-		w.Write([]byte(fmt.Sprintf(assumeRoleRespMsg, time.Now().Add(15 * time.Minute).Format("2006-01-02T15:04:05Z"))))
+		_, _ = w.Write([]byte(fmt.Sprintf(assumeRoleRespMsg, time.Now().Add(15*time.Minute).Format("2006-01-02T15:04:05Z"))))
 	}))
 
 	customProviderCalled := false
