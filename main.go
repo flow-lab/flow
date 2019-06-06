@@ -8,10 +8,16 @@ import (
 	"github.com/urfave/cli"
 )
 
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 func main() {
 	app := cli.NewApp()
-	app.Name = "development tooling for AWS"
-	app.Version = "0.1.55"
+	app.Name = fmt.Sprintf("development tooling for AWS. Commit: %s, release date: %s", commit, date)
+	app.Version = version
 
 	app.Commands = []cli.Command{
 		dynamodbCommand(),
