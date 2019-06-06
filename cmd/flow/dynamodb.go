@@ -17,7 +17,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-var dynamodbCommand = func() cli.Command {
+var DynamodbCommand = func() cli.Command {
 	return cli.Command{
 		Name: "dynamodb",
 		Subcommands: []cli.Command{

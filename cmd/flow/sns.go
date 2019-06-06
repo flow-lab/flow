@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-var snsCommand = func() cli.Command {
+var SNSCommand = func() cli.Command {
 	return cli.Command{
 		Name: "sns",
 		Subcommands: []cli.Command{

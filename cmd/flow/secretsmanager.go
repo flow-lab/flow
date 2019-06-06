@@ -29,7 +29,7 @@ type SecretOutput struct {
 	Value *secretsmanager.GetSecretValueOutput
 }
 
-var secretsmanagerCommand = func() cli.Command {
+var SecretsmanagerCommand = func() cli.Command {
 	return cli.Command{
 		Name: "secretsmanager",
 		Subcommands: []cli.Command{

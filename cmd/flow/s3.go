@@ -8,7 +8,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-var s3Command = func() cli.Command {
+var S3Command = func() cli.Command {
 	return cli.Command{
 		Name: "s3",
 		Subcommands: []cli.Command{

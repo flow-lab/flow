@@ -6,7 +6,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-var base64Command = func() cli.Command {
+var Base64Command = func() cli.Command {
 	return cli.Command{
 		Name:        "base64",
 		Description: "encoding/decoding base64",

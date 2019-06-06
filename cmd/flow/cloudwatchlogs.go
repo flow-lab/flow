@@ -11,7 +11,7 @@ import (
 	"strconv"
 )
 
-var cloudwatchlogsCommand = func() cli.Command {
+var CloudwatchlogsCommand = func() cli.Command {
 	return cli.Command{
 		Name: "cloudwatchlogs",
 		Subcommands: []cli.Command{

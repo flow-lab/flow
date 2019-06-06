@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-var sqsCommand = func() cli.Command {
+var SQSCommand = func() cli.Command {
 	return cli.Command{
 		Name: "sqs",
 		Subcommands: []cli.Command{

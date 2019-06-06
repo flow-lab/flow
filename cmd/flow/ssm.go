@@ -14,7 +14,7 @@ type Parameter struct {
 	ParameterValue    *ssm.Parameter
 }
 
-var ssmCommand = func() cli.Command {
+var SSMCommand = func() cli.Command {
 	return cli.Command{
 		Name: "ssm",
 		Subcommands: []cli.Command{

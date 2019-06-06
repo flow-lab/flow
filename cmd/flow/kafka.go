@@ -7,7 +7,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-var kafkaCommand = func() cli.Command {
+var KafkaCommand = func() cli.Command {
 	return cli.Command{
 		Name: "kafka",
 		Subcommands: []cli.Command{

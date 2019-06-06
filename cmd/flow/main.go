@@ -20,18 +20,18 @@ func main() {
 	app.Version = version
 
 	app.Commands = []cli.Command{
-		dynamodbCommand(),
-		sqsCommand(),
-		snsCommand(),
-		cloudwatchCommand(),
-		cloudwatchlogsCommand(),
-		ssmCommand(),
-		secretsmanagerCommand(),
-		kinesisCommand(),
-		base64Command(),
-		s3Command(),
-		apiGateway(),
-		kafkaCommand(),
+		DynamodbCommand(),
+		SQSCommand(),
+		SNSCommand(),
+		CloudwatchCommand(),
+		CloudwatchlogsCommand(),
+		SSMCommand(),
+		SecretsmanagerCommand(),
+		KinesisCommand(),
+		Base64Command(),
+		S3Command(),
+		APIGateway(),
+		KafkaCommand(),
 	}
 
 	app.Action = func(c *cli.Context) error {

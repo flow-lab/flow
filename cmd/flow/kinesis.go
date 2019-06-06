@@ -9,7 +9,7 @@ import (
 	"strconv"
 )
 
-var kinesisCommand = func() cli.Command {
+var KinesisCommand = func() cli.Command {
 	return cli.Command{
 		Name: "kinesis",
 		Subcommands: []cli.Command{

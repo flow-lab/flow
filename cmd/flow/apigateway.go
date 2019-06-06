@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-var apiGateway = func() cli.Command {
+var APIGateway = func() cli.Command {
 	return cli.Command{
 		Name: "apigateway",
 		Subcommands: []cli.Command{

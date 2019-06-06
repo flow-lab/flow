@@ -7,7 +7,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-var cloudwatchCommand = func() cli.Command {
+var CloudwatchCommand = func() cli.Command {
 	return cli.Command{
 		Name: "cloudwatch",
 		Subcommands: []cli.Command{
