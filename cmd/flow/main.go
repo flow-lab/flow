@@ -78,8 +78,10 @@ type Parameter struct {
 
 func main() {
 	app := cli.NewApp()
-	app.Name = fmt.Sprintf("development tooling for AWS. Commit: %s, release date: %s", commit, date)
+	app.Name = fmt.Sprintf("development tooling for AWS, released: %s, commit %s", date, commit)
 	app.Version = version
+	app.Author = "krzysztof@flowlab.no"
+	app.Usage = "AWS Flow CLI"
 
 	app.Commands = []cli.Command{
 		func() cli.Command {
