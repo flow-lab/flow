@@ -18,6 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/flow-lab/flow/pkg/base64"
+	"github.com/flow-lab/flow/pkg/logs"
 	"github.com/flow-lab/flow/pkg/session"
 	"io/ioutil"
 	"log"
@@ -1403,26 +1404,22 @@ func main() {
 						Action: func(c *cli.Context) error {
 							profile := c.String("profile")
 							logGroupName := c.String("log-group-name")
-							retention, err := strconv.ParseInt(c.String("days"), 10, 0)
+							days := c.String("days")
+							if days == "" {
+								return fmt.Errorf("days is required")
+							}
+
+							retention, err := strconv.ParseInt(days, 10, 0)
 							if err != nil {
 								return err
 							}
+							if logGroupName == "" {
+								return fmt.Errorf("log-group-name is required")
+							}
+
 							sess := session.NewSessionWithSharedProfile(profile)
-
 							cwlc := cloudwatchlogs.New(sess)
-
-							params := cloudwatchlogs.PutRetentionPolicyInput{
-								LogGroupName:    &logGroupName,
-								RetentionInDays: aws.Int64(retention),
-							}
-
-							_, err = cwlc.PutRetentionPolicy(&params)
-							if err != nil {
-								return err
-							}
-							fmt.Printf("ok")
-
-							return nil
+							return logs.SetRetention(logGroupName, retention, cwlc)
 						},
 					},
 					{
@@ -1592,25 +1589,52 @@ func main() {
 							sess := session.NewSessionWithSharedProfile(profile)
 							cwlc := cloudwatchlogs.New(sess)
 
-							input := &cloudwatchlogs.DescribeLogGroupsInput{}
-
-							if logGroupNamePrefix != "" {
-								input.LogGroupNamePrefix = &logGroupNamePrefix
+							logGroups, err := logs.Describe(&logGroupNamePrefix, cwlc)
+							if err != nil {
+								return err
 							}
 
-							err := cwlc.DescribeLogGroupsPages(input, func(output *cloudwatchlogs.DescribeLogGroupsOutput, lastPage bool) bool {
-								for _, lg := range output.LogGroups {
-									bytes, err := json.Marshal(lg)
-									if err != nil {
-										panic(err)
-									}
+							bytes, err := json.Marshal(logGroups)
+							if err != nil {
+								return err
+							}
 
-									fmt.Println(string(bytes))
-								}
-								return lastPage == false
-							})
+							fmt.Print(string(bytes))
 
-							return err
+							return nil
+						},
+					},
+					{
+						Name:  "summary",
+						Usage: "summary log groups",
+						Flags: []cli.Flag{
+							cli.StringFlag{
+								Name:  "log-group-name-prefix",
+								Value: "",
+							},
+							cli.StringFlag{
+								Name:  "profile",
+								Value: "",
+							},
+						},
+						Action: func(c *cli.Context) error {
+							profile := c.String("profile")
+							sess := session.NewSessionWithSharedProfile(profile)
+							cwlc := cloudwatchlogs.New(sess)
+							logGroupNamePrefix := c.String("log-group-name-prefix")
+							logGroups, err := logs.Describe(&logGroupNamePrefix, cwlc)
+							if err != nil {
+								return err
+							}
+
+							summary := logs.Summary(logGroups)
+							bytes, err := json.Marshal(summary)
+							if err != nil {
+								return err
+							}
+							fmt.Print(string(bytes))
+
+							return nil
 						},
 					},
 				},
