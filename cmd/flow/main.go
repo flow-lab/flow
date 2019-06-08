@@ -83,7 +83,7 @@ func main() {
 	app.Version = version
 	app.Author = "krzysztof@flowlab.no"
 	app.Usage = "AWS CLI"
-	app.Description = fmt.Sprintf("flow cli. Commit %v, built at %v", commit, date)
+	app.Description = fmt.Sprintf("flow cli. Commit %v, build at %v", commit, date)
 
 	app.Commands = []cli.Command{
 		func() cli.Command {
