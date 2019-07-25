@@ -126,7 +126,6 @@ func main() {
 								return err
 							}
 							sess := session.NewSessionWithSharedProfile(profile)
-
 							ddbc := dynamodb.New(sess)
 
 							input := &dynamodb.DescribeTableInput{

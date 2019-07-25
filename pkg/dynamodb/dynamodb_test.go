@@ -1,6 +1,7 @@
 package dynamodb
 
 import (
+	"context"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -9,12 +10,14 @@ import (
 	"testing"
 )
 
+const nrOfResults = 5
+
 type dynamoDBMock struct {
 	dynamodbiface.DynamoDBAPI
 }
 
 func (d *dynamoDBMock) ScanPages(input *dynamodb.ScanInput, callback func(*dynamodb.ScanOutput, bool) bool) error {
-	for i := 0; i < 5; i++ {
+	for i := 0; i < nrOfResults; i++ {
 		output := &dynamodb.ScanOutput{
 			Items: []map[string]*dynamodb.AttributeValue{
 				{
@@ -44,17 +47,22 @@ func (d *dynamoDBErrorMock) ScanPages(input *dynamodb.ScanInput, callback func(*
 func TestScan(t *testing.T) {
 	t.Run("Should scan", func(t *testing.T) {
 		c := &dynamoDBMock{}
-		resultStream := Scan(c, "test")
 
+		ctx := context.TODO()
+		resultStream := scan(ctx, c, "test", 10)
+		counter := 0
 		for elem := range resultStream {
 			assert.Nil(t, elem.error)
 			assert.NotNil(t, elem.value)
+			counter++
 		}
+
+		assert.Equal(t, nrOfResults, counter)
 	})
 
 	t.Run("Should emit error", func(t *testing.T) {
 		c := &dynamoDBErrorMock{}
-		resultStream := Scan(c, "test")
+		resultStream := scan(context.TODO(), c, "test", 0)
 
 		for elem := range resultStream {
 			assert.NotNil(t, elem.error)
@@ -66,9 +74,10 @@ func TestScan(t *testing.T) {
 func TestDelete(t *testing.T) {
 	t.Run("Should delete", func(t *testing.T) {
 		c := &dynamoDBMock{}
-		scanResultStream := make(chan ScanResult)
-		deleteResultStream := Delete(c, "test", scanResultStream)
-		scanResultStream <- ScanResult{
+		scanResultStream := make(chan scanResult)
+		ctx := context.TODO()
+		deleteResultStream := delete(ctx, c, "test", scanResultStream)
+		scanResultStream <- scanResult{
 			error: nil,
 			value: &map[string]*dynamodb.AttributeValue{
 				"id": {
@@ -87,5 +96,37 @@ func TestDelete(t *testing.T) {
 		}
 
 		assert.Equal(t, 1, counter)
+	})
+}
+
+func TestBatch(t *testing.T) {
+	t.Run("Should batch", func(t *testing.T) {
+		scanResultStream := make(chan scanResult)
+		ctx := context.TODO()
+		batchResultStream := batch(ctx, 25, scanResultStream)
+
+		scanResult := scanResult{
+			error: nil,
+			value: &map[string]*dynamodb.AttributeValue{
+				"id": {
+					S: aws.String("1"),
+				},
+			},
+		}
+
+		go func() {
+			for i := 0; i < 60; i++ {
+				scanResultStream <- scanResult
+			}
+			close(scanResultStream)
+		}()
+
+		counter := 0
+		for r := range batchResultStream {
+			assert.True(t, len(r.value) <= 25 && len(r.value) > 0)
+			counter++
+		}
+
+		assert.Equal(t, 3, counter)
 	})
 }
