@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
@@ -18,6 +19,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/flow-lab/flow/pkg/base64"
+	dynamodb2 "github.com/flow-lab/flow/pkg/dynamodb"
 	"github.com/flow-lab/flow/pkg/logs"
 	"github.com/flow-lab/flow/pkg/session"
 	"io/ioutil"
@@ -84,12 +86,60 @@ func main() {
 	app.Author = "krzysztof@flowlab.no"
 	app.Usage = "AWS CLI"
 	app.Description = fmt.Sprintf("flow cli. Commit %v, build at %v", commit, date)
+	app.EnableBashCompletion = true
 
 	app.Commands = []cli.Command{
 		func() cli.Command {
 			return cli.Command{
 				Name: "dynamodb",
 				Subcommands: []cli.Command{
+					{
+						Name:  "delete",
+						Usage: "delete item(s) form dynamodb using scan operation",
+						Flags: []cli.Flag{
+							cli.StringFlag{
+								Name:  "profile",
+								Value: "",
+							},
+							//cli.StringFlag{
+							//	Name:  "filter-expression",
+							//	Value: "",
+							//},
+							cli.StringFlag{
+								Name:  "table-name",
+								Value: "",
+							},
+							//cli.StringFlag{
+							//	Name:  "expression-attribute-values",
+							//	Value: "",
+							//},
+						},
+						Action: func(c *cli.Context) error {
+							profile := c.String("profile")
+							tableName := c.String("table-name")
+							//filterExpression := c.String("filter-expression")
+							//expressionAttributeValues := c.String("expression-attribute-values")
+							sess := session.NewSessionWithSharedProfile(profile)
+							ddbc := dynamodb.New(sess)
+
+							if tableName == "" {
+								return fmt.Errorf("table-name is required")
+							}
+
+							fc, err := dynamodb2.NewFlowDynamoDBClient(ddbc)
+							if err != nil {
+								return err
+							}
+
+							// TODO [grokrz]: add filterExpression and expressionAttributeValues
+							err = fc.Delete(context.Background(), tableName)
+							if err != nil {
+								return err
+							}
+
+							return nil
+						},
+					},
 					{
 						Name:  "purge",
 						Usage: "fast purge dynamodb using scan operation",
@@ -230,9 +280,6 @@ func main() {
 								return err
 							}
 
-							wg.Wait()
-
-							fmt.Println("done")
 							return nil
 						},
 					},
