@@ -52,7 +52,6 @@ func TestScan(t *testing.T) {
 		resultStream := scan(ctx, c, "test", 10)
 		counter := 0
 		for elem := range resultStream {
-			assert.Nil(t, elem.error)
 			assert.NotNil(t, elem.value)
 			counter++
 		}
@@ -65,7 +64,6 @@ func TestScan(t *testing.T) {
 		resultStream := scan(context.TODO(), c, "test", 0)
 
 		for elem := range resultStream {
-			assert.NotNil(t, elem.error)
 			assert.Nil(t, elem.value)
 		}
 	})
@@ -78,7 +76,6 @@ func TestDelete(t *testing.T) {
 		ctx := context.TODO()
 		deleteResultStream := delete(ctx, c, "test", scanResultStream)
 		scanResultStream <- scanResult{
-			error: nil,
 			value: &map[string]*dynamodb.AttributeValue{
 				"id": {
 					S: aws.String("1"),
@@ -99,6 +96,51 @@ func TestDelete(t *testing.T) {
 	})
 }
 
+func TestMapToPrimaryKey(t *testing.T) {
+	t.Run("Should map to primary key", func(t *testing.T) {
+		scanResultStream := make(chan scanResult)
+		ctx := context.TODO()
+
+		dto := dynamodb.DescribeTableOutput{
+			Table: &dynamodb.TableDescription{
+				KeySchema: []*dynamodb.KeySchemaElement{
+					{
+						AttributeName: aws.String("id"),
+						KeyType:       aws.String("S"),
+					},
+				},
+			},
+		}
+
+		out := mapToPrimaryKey(ctx, dto.Table.KeySchema, scanResultStream)
+
+		scanResult := scanResult{
+			value: &map[string]*dynamodb.AttributeValue{
+				"id": {
+					S: aws.String("1"),
+				},
+				"apud": {
+					S: aws.String("test"),
+				},
+			},
+		}
+
+		go func() {
+			scanResultStream <- scanResult
+			close(scanResultStream)
+		}()
+
+		counter := 0
+		for r := range out {
+			assert.Equal(t, "1", aws.StringValue(r.value["id"].S))
+			assert.Nil(t, r.value["apud"])
+			counter++
+		}
+
+		assert.Equal(t, 1, counter)
+	})
+}
+
 func TestBatch(t *testing.T) {
 	t.Run("Should batch", func(t *testing.T) {
 		scanResultStream := make(chan scanResult)
@@ -106,7 +148,6 @@ func TestBatch(t *testing.T) {
 		batchResultStream := batch(ctx, 25, scanResultStream)
 
 		scanResult := scanResult{
-			error: nil,
 			value: &map[string]*dynamodb.AttributeValue{
 				"id": {
 					S: aws.String("1"),

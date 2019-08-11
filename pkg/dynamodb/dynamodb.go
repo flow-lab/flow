@@ -2,13 +2,13 @@ package dynamodb
 
 import (
 	"context"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
 )
 
 // scanResult represents the result of scan operation
 type scanResult struct {
-	error error
 	value *map[string]*dynamodb.AttributeValue
 }
 
@@ -23,7 +23,6 @@ func scan(ctx context.Context, c dynamodbiface.DynamoDBAPI, tableName string, bu
 		err := c.ScanPages(input, func(output *dynamodb.ScanOutput, lastPage bool) bool {
 			for _, item := range output.Items {
 				resultStream <- scanResult{
-					error: nil,
 					value: &item,
 				}
 
@@ -38,14 +37,46 @@ func scan(ctx context.Context, c dynamodbiface.DynamoDBAPI, tableName string, bu
 			return lastPage == false
 		})
 		if err != nil {
+			// TODO [grokrz]: error handling
 			resultStream <- scanResult{
 				value: nil,
-				error: err,
 			}
 		}
 	}(resultStream)
 
 	return resultStream
+}
+
+type item struct {
+	value map[string]*dynamodb.AttributeValue
+}
+
+// mapToPrimaryKey will map item to only primary keys so it can be used as input to delete
+func mapToPrimaryKey(ctx context.Context, keySchemaElement []*dynamodb.KeySchemaElement, in chan scanResult) <-chan item {
+	out := make(chan item)
+	go func(in <-chan scanResult) {
+		defer close(out)
+
+		for k := range in {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+
+			key := make(map[string]*dynamodb.AttributeValue)
+			for _, ks := range keySchemaElement {
+				an := aws.StringValue(ks.AttributeName)
+				key[an] = (*k.value)[an]
+			}
+
+			out <- item{
+				value: key,
+			}
+		}
+	}(in)
+
+	return out
 }
 
 type batchResult struct {
@@ -112,10 +143,6 @@ func delete(ctx context.Context, c dynamodbiface.DynamoDBAPI, tableName string, 
 			default:
 			}
 
-			if r.error != nil {
-				// TODO [grokrz]: error handling
-				panic(r.error)
-			}
 			input := &dynamodb.WriteRequest{
 				DeleteRequest: &dynamodb.DeleteRequest{
 					Key: *r.value,
