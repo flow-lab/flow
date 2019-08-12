@@ -1,6 +1,9 @@
 # Flow AWS tooling [![Build Status](https://travis-ci.org/flow-lab/flow.svg?branch=master)](https://travis-ci.org/flow-lab/flow) [![Snap Status](https://build.snapcraft.io/badge/flow-lab/flow.svg)](https://build.snapcraft.io/user/flow-lab/flow)
 
-Set of tooling commands for AWS development
+Flow is a CLI tooling that helps developing applications on AWS. Is meant to be used only in dev environments
+and not in production.
+
+NOTE: Flow CLI is under development, and may occasionally make backwards-incompatible changes.
 
 ## Installation
 
@@ -41,6 +44,14 @@ Set of tooling commands for AWS development
 * delete items with amount > 100
 
     `flow dynamodb delete --table-name Test --filter-expression "amount > :amount" --expression-attribute-values '{":amount":{"N":"100"}}'`
+    
+* encode base64
+
+    `flow base64 encode --input "hello"`
+
+* decode base64
+
+    `flow base64 decode --input "aGVsbG8="`
 
 help:
 ```sh
