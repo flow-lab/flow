@@ -19,7 +19,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/flow-lab/flow/pkg/base64"
-	dynamodb2 "github.com/flow-lab/flow/pkg/dynamodb"
+	flowdynamo "github.com/flow-lab/flow/pkg/dynamodb"
 	"github.com/flow-lab/flow/pkg/logs"
 	"github.com/flow-lab/flow/pkg/session"
 	"io/ioutil"
@@ -95,30 +95,26 @@ func main() {
 				Subcommands: []cli.Command{
 					{
 						Name:  "delete",
-						Usage: "delete item(s) form dynamodb using scan operation",
+						Usage: "delete item(s) from dynamodb using scan operation",
 						Flags: []cli.Flag{
 							cli.StringFlag{
-								Name:  "profile",
-								Value: "",
+								Name: "filter-expression",
 							},
-							//cli.StringFlag{
-							//	Name:  "filter-expression",
-							//	Value: "",
-							//},
 							cli.StringFlag{
-								Name:  "table-name",
-								Value: "",
+								Name: "table-name",
 							},
-							//cli.StringFlag{
-							//	Name:  "expression-attribute-values",
-							//	Value: "",
-							//},
+							cli.StringFlag{
+								Name: "expression-attribute-values",
+							},
+							cli.StringFlag{
+								Name: "profile",
+							},
 						},
 						Action: func(c *cli.Context) error {
 							profile := c.String("profile")
 							tableName := c.String("table-name")
-							//filterExpression := c.String("filter-expression")
-							//expressionAttributeValues := c.String("expression-attribute-values")
+							filterExpression := c.String("filter-expression")
+							expressionAttributeValues := c.String("expression-attribute-values")
 							sess := session.NewSessionWithSharedProfile(profile)
 							ddbc := dynamodb.New(sess)
 
@@ -126,23 +122,27 @@ func main() {
 								return fmt.Errorf("table-name is required")
 							}
 
-							fc, err := dynamodb2.NewFlowDynamoDBClient(ddbc)
+							fc, err := flowdynamo.NewFlowDynamoDBClient(ddbc)
 							if err != nil {
 								return err
 							}
 
-							// TODO [grokrz]: add filterExpression and expressionAttributeValues
-							err = fc.Delete(context.Background(), tableName)
-							if err != nil {
-								return err
+							var filterExpressionPtr *string
+							if filterExpression != "" {
+								filterExpressionPtr = &filterExpression
 							}
 
-							return nil
+							var expressionAttributeValuesPtr *string
+							if expressionAttributeValues != "" {
+								expressionAttributeValuesPtr = &expressionAttributeValues
+							}
+
+							return fc.Delete(context.Background(), tableName, filterExpressionPtr, expressionAttributeValuesPtr)
 						},
 					},
 					{
 						Name:  "purge",
-						Usage: "fast purge dynamodb using scan operation",
+						Usage: "[deprecated]: please use delete instead",
 						Flags: []cli.Flag{
 							cli.StringFlag{
 								Name:  "profile",

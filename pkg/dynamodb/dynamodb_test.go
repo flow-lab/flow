@@ -76,7 +76,7 @@ func TestFlowDynamoDBClient_Delete(t *testing.T) {
 		c, err := NewFlowDynamoDBClient(&dynamoDBMock{})
 		assert.Nil(t, err)
 
-		err = c.Delete(context.TODO(), "test")
+		err = c.Delete(context.TODO(), "test", nil, nil)
 
 		assert.Nil(t, err)
 	})
@@ -85,7 +85,7 @@ func TestFlowDynamoDBClient_Delete(t *testing.T) {
 		c, err := NewFlowDynamoDBClient(&dynamoDBErrorMock{})
 		assert.Nil(t, err)
 
-		err = c.Delete(context.TODO(), "test")
+		err = c.Delete(context.TODO(), "test", nil, nil)
 
 		assert.NotNil(t, err)
 	})
@@ -96,7 +96,7 @@ func TestScan(t *testing.T) {
 		c := &dynamoDBMock{}
 
 		ctx := context.TODO()
-		scanResults := scan(ctx, c, "test", 10)
+		scanResults := scan(ctx, c, "test", aws.String("test"), nil, 10)
 		counter := 0
 		for elem := range scanResults {
 			assert.NotNil(t, elem.value)
@@ -110,7 +110,7 @@ func TestScan(t *testing.T) {
 		c := &dynamoDBErrorMock{}
 
 		ctx := context.TODO()
-		scanResults := scan(ctx, c, "test", 10)
+		scanResults := scan(ctx, c, "test", nil, nil, 10)
 
 		counter := 0
 		for elem := range scanResults {

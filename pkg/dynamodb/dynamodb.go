@@ -2,6 +2,7 @@ package dynamodb
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -10,7 +11,7 @@ import (
 
 // FlowDynamoDBClient is a client for interacting with DynamoDB API and wraps the standard client.
 type FlowDynamoDBClient interface {
-	Delete(ctx context.Context, tableName string) error
+	Delete(ctx context.Context, tableName string, filterExpression *string, expressionAttributeValues *string) error
 }
 
 type flowDynamoDBClient struct {
@@ -31,7 +32,7 @@ func NewFlowDynamoDBClient(d dynamodbiface.DynamoDBAPI) (FlowDynamoDBClient, err
 //
 // In case of error that program cannot recover the error will propagated to the client
 // and processing will be stopped.
-func (f *flowDynamoDBClient) Delete(ctx context.Context, tableName string) error {
+func (f *flowDynamoDBClient) Delete(ctx context.Context, tableName string, filterExpression *string, expressionAttributeValues *string) error {
 	describeTableInput := &dynamodb.DescribeTableInput{
 		TableName: aws.String(tableName),
 	}
@@ -40,7 +41,7 @@ func (f *flowDynamoDBClient) Delete(ctx context.Context, tableName string) error
 		return err
 	}
 
-	sr := scan(ctx, f.DynamoDBAPI, tableName, 100)
+	sr := scan(ctx, f.DynamoDBAPI, tableName, filterExpression, expressionAttributeValues, 100)
 	pkr := mapToPrimaryKey(ctx, describeTableOutput.Table.KeySchema, sr)
 	br := batch(ctx, 25, pkr)
 	dr := batchDelete(ctx, f.DynamoDBAPI, tableName, br)
@@ -64,14 +65,28 @@ type scanResult struct {
 //
 // Result channel is initialized with the specified
 // buffer capacity if bufferSize > 0. If zero, the channel is unbuffered.
-func scan(ctx context.Context, c dynamodbiface.DynamoDBAPI, tableName string, bufferSize int) <-chan scanResult {
-	input := &dynamodb.ScanInput{
-		TableName: &tableName,
-	}
+func scan(ctx context.Context, c dynamodbiface.DynamoDBAPI, tableName string, filterExpression *string, expressionAttributeValues *string, bufferSize int) <-chan scanResult {
 	scanResults := make(chan scanResult, bufferSize)
 	go func(scanResults chan<- scanResult) {
 		defer close(scanResults)
-		err := c.ScanPages(input, func(output *dynamodb.ScanOutput, lastPage bool) bool {
+		scanInput := &dynamodb.ScanInput{
+			TableName: &tableName,
+		}
+		if filterExpression != nil {
+			scanInput.FilterExpression = filterExpression
+		}
+		if expressionAttributeValues != nil {
+			var m map[string]*dynamodb.AttributeValue
+			err := json.Unmarshal([]byte(*expressionAttributeValues), &m)
+			if err != nil {
+				scanResults <- scanResult{
+					err: fmt.Errorf("unable to unmarshal expressionAttributes: %v", expressionAttributeValues),
+				}
+				return
+			}
+			scanInput.ExpressionAttributeValues = m
+		}
+		err := c.ScanPages(scanInput, func(output *dynamodb.ScanOutput, lastPage bool) bool {
 			for _, item := range output.Items {
 				scanResults <- scanResult{
 					value: item,

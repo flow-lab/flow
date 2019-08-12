@@ -34,9 +34,13 @@ Set of tooling commands for AWS development
 
 ## example usage:
 
-```sh
-flow dynamodb purge --table-name TestTable --key tableId --profile cloudformation@flowlab-dev
-```
+* delete all items from DynamoDB
+
+    `flow dynamodb delete --table-name TestTable`
+
+* delete items with amount > 100
+
+    `flow dynamodb delete --table-name Test --filter-expression "amount > :amount" --expression-attribute-values '{":amount":{"N":"100"}}'`
 
 help:
 ```sh
