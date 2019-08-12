@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
 )
 
-// FlowDynamoDBClient is a client for interacting with DynamoDB and wraps the standard client.
+// FlowDynamoDBClient is a client for interacting with DynamoDB API and wraps the standard client.
 type FlowDynamoDBClient interface {
 	Delete(ctx context.Context, tableName string) error
 }
@@ -17,7 +17,20 @@ type flowDynamoDBClient struct {
 	dynamodbiface.DynamoDBAPI
 }
 
+// NewFlowDynamoDBClient creates a new flow dynamoDB client.
+func NewFlowDynamoDBClient(d dynamodbiface.DynamoDBAPI) (FlowDynamoDBClient, error) {
+	client := &flowDynamoDBClient{d}
+	return client, nil
+}
+
 // Delete deletes all items from the table.
+//
+// Implementation follows pipeline where:
+// scan (generator) -> mapToPrimaryKey (stage) -> batch (stage) -> batchDelete (stage) -> client
+// Each stage is no blocking and is using channels for communication.
+//
+// In case of error that program cannot recover the error will propagated to the client
+// and processing will be stopped.
 func (f *flowDynamoDBClient) Delete(ctx context.Context, tableName string) error {
 	describeTableInput := &dynamodb.DescribeTableInput{
 		TableName: aws.String(tableName),
@@ -32,21 +45,18 @@ func (f *flowDynamoDBClient) Delete(ctx context.Context, tableName string) error
 	br := batch(ctx, 25, pkr)
 	dr := batchDelete(ctx, f.DynamoDBAPI, tableName, br)
 
-	for range dr {
-		fmt.Printf(".")
+	for r := range dr {
+		if r.err != nil {
+			return r.err
+		}
 	}
 
 	return nil
 }
 
-// NewFlowDynamoDBClient creates a new flow dynamoDB client.
-func NewFlowDynamoDBClient(d dynamodbiface.DynamoDBAPI) (FlowDynamoDBClient, error) {
-	client := &flowDynamoDBClient{d}
-	return client, nil
-}
-
 // scanResult represents the result of scan operation.
 type scanResult struct {
+	err   error
 	value map[string]*dynamodb.AttributeValue
 }
 
@@ -78,7 +88,9 @@ func scan(ctx context.Context, c dynamodbiface.DynamoDBAPI, tableName string, bu
 			return lastPage == false
 		})
 		if err != nil {
-			panic(fmt.Errorf("error during scanPages: %v", err))
+			scanResults <- scanResult{
+				err: fmt.Errorf("error during scanPages: %v", err),
+			}
 		}
 	}(scanResults)
 
@@ -86,20 +98,23 @@ func scan(ctx context.Context, c dynamodbiface.DynamoDBAPI, tableName string, bu
 }
 
 type mapToPrimaryKeyResult struct {
+	err   error
 	value map[string]*dynamodb.AttributeValue
 }
 
-// mapToPrimaryKey will map item to only primary keys so it can be used as input to delete
+// mapToPrimaryKey will map item to only primary keys so it can be used as input to delete.
+//
 func mapToPrimaryKey(ctx context.Context, keySchemaElement []*dynamodb.KeySchemaElement, scanResults <-chan scanResult) <-chan mapToPrimaryKeyResult {
 	mapToPrimaryKeyResults := make(chan mapToPrimaryKeyResult)
 	go func(in <-chan scanResult) {
 		defer close(mapToPrimaryKeyResults)
 
 		for k := range in {
-			select {
-			case <-ctx.Done():
+			if k.err != nil {
+				mapToPrimaryKeyResults <- mapToPrimaryKeyResult{
+					err: k.err,
+				}
 				return
-			default:
 			}
 
 			key := make(map[string]*dynamodb.AttributeValue)
@@ -111,6 +126,12 @@ func mapToPrimaryKey(ctx context.Context, keySchemaElement []*dynamodb.KeySchema
 			mapToPrimaryKeyResults <- mapToPrimaryKeyResult{
 				value: key,
 			}
+
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
 		}
 	}(scanResults)
 
@@ -118,6 +139,7 @@ func mapToPrimaryKey(ctx context.Context, keySchemaElement []*dynamodb.KeySchema
 }
 
 type batchResult struct {
+	err   error
 	value []map[string]*dynamodb.AttributeValue
 }
 
@@ -131,6 +153,12 @@ func batch(ctx context.Context, batchSize int, mapToPrimaryKeyResults <-chan map
 		for {
 			select {
 			case r, ok := <-mapToPrimaryKeyResults:
+				if r.err != nil {
+					batchResults <- batchResult{
+						err: r.err,
+					}
+					return
+				}
 				if ok == false {
 					// channel has been closed, emit and close the batchResults channel
 					if len(b) > 0 {
@@ -177,7 +205,7 @@ func clone(src []map[string]*dynamodb.AttributeValue) []map[string]*dynamodb.Att
 
 // deleteResult represents the result of delete operation
 type deleteResult struct {
-	error error
+	err error
 }
 
 // batchDelete deletes the elements given in incoming channel and sends result to output channel
@@ -186,6 +214,12 @@ func batchDelete(ctx context.Context, c dynamodbiface.DynamoDBAPI, tableName str
 	go func(batchResults <-chan batchResult) {
 		defer close(deleteResults)
 		for r := range batchResults {
+			if r.err != nil {
+				deleteResults <- deleteResult{
+					err: r.err,
+				}
+				return
+			}
 			var wr []*dynamodb.WriteRequest
 			for _, i := range r.value {
 				wr = append(wr, &dynamodb.WriteRequest{
@@ -203,8 +237,10 @@ func batchDelete(ctx context.Context, c dynamodbiface.DynamoDBAPI, tableName str
 
 			output, err := c.BatchWriteItem(batchWriteItemInput)
 			if err != nil {
-				// TODO [grokrz]: error handling
-				panic(err)
+				deleteResults <- deleteResult{
+					err: err,
+				}
+				return
 			}
 
 			ui := output.UnprocessedItems
@@ -212,17 +248,15 @@ func batchDelete(ctx context.Context, c dynamodbiface.DynamoDBAPI, tableName str
 				if len(ui) > 0 {
 					o, err := c.BatchWriteItem(&dynamodb.BatchWriteItemInput{})
 					if err != nil {
-						// TODO [grokrz]: error handling
-						panic(err)
+						deleteResults <- deleteResult{
+							err: err,
+						}
+						return
 					}
 					ui = o.UnprocessedItems
 				} else {
 					break
 				}
-			}
-
-			deleteResults <- deleteResult{
-				error: err,
 			}
 
 			select {
