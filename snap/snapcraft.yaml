@@ -16,8 +16,7 @@ parts:
     go-importpath: github.com/flow-lab/flow
     build-attributes: [no-patchelf]
     build-snaps: [go]
-    build-packages:
-    - gcc
+    build-packages: [gcc]
 
 apps:
   flow:
