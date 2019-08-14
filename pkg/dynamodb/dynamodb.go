@@ -24,7 +24,8 @@ func NewFlowDynamoDBClient(d dynamodbiface.DynamoDBAPI) (FlowDynamoDBClient, err
 	return client, nil
 }
 
-// Delete deletes all items from the table.
+// Delete deletes items form table. Will use filterExpression and expressionAttributeValues if given to only delete
+// items defined or will delete all otherwise(purged).
 //
 // Implementation follows pipeline where:
 // scan (generator) -> mapToPrimaryKey (stage) -> batch (stage) -> batchDelete (stage) -> client
