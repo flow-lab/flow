@@ -32,18 +32,19 @@ archives:
       - goos: windows
         format: zip
 
-brew:
-  github:
-    owner: flow-lab
-    name: flow-tap
-  folder: Formula
-  homepage: "https://www.flowlab.no/"
-  description: "AWS tooling for faster development."
-  test: |
-    system "#{bin}/flow --version"
+brews:
+  - github:
+      owner: flow-lab
+      name: flow-tap
+    folder: Formula
+    homepage: "https://www.flowlab.no/"
+    description: "AWS tooling for faster development."
+    test: |
+      system "#{bin}/flow --version"
 
-s3:
-  - bucket: flowlab-no-artifact-public
+blobs:
+  - provider: s3
+    bucket: flowlab-no-artifact-public
     region: eu-west-1
     profile: "cloudformation@flowlab-development"
     acl: public-read
