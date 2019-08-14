@@ -42,9 +42,8 @@ brews:
     test: |
       system "#{bin}/flow --version"
 
-blobs:
-  - provider: s3
-    bucket: flowlab-no-artifact-public
+s3:
+  - bucket: flowlab-no-artifact-public
     region: eu-west-1
     profile: "cloudformation@flowlab-development"
     acl: public-read
