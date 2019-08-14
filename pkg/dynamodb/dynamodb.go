@@ -24,7 +24,7 @@ func NewFlowDynamoDBClient(d dynamodbiface.DynamoDBAPI) (FlowDynamoDBClient, err
 	return client, nil
 }
 
-// Delete deletes items form table. Will use filterExpression and expressionAttributeValues if given to only delete
+// Delete deletes items from table. Will use filterExpression and expressionAttributeValues if given to only delete
 // items defined or will delete all otherwise(purged).
 //
 // Implementation follows pipeline where:
