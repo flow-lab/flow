@@ -37,6 +37,8 @@ NOTE: Flow CLI is under development, and may occasionally make backwards-incompa
 
 ## example usage:
 
+### dynamodb
+
 * delete all items from DynamoDB "TestTable" (using scan operation)
 
     `flow dynamodb delete --table-name TestTable`
@@ -44,6 +46,8 @@ NOTE: Flow CLI is under development, and may occasionally make backwards-incompa
 * delete all items frm DynamoDB "TestTable" with amount > 100
 
     `flow dynamodb delete --table-name TestTable --filter-expression "amount > :amount" --expression-attribute-values '{":amount":{"N":"100"}}'`
+    
+### base64
     
 * encode base64
 
