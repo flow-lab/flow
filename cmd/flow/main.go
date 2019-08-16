@@ -22,8 +22,10 @@ import (
 	flowdynamo "github.com/flow-lab/flow/pkg/dynamodb"
 	"github.com/flow-lab/flow/pkg/logs"
 	"github.com/flow-lab/flow/pkg/session"
+	vegeta "github.com/tsenart/vegeta/lib"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -2347,6 +2349,83 @@ func main() {
 				},
 			}
 		}(),
+		{
+			Name:        "test",
+			Description: "load test",
+			Usage:       "load testing commands",
+			Subcommands: []cli.Command{
+				{
+					Name: "http",
+					Flags: []cli.Flag{
+						cli.StringSliceFlag{
+							Name:  "url",
+							Usage: "url",
+						},
+						cli.IntFlag{
+							Name:  "frequency",
+							Value: 1,
+							Usage: "frequency (number of occurrences) per second",
+						},
+						cli.StringFlag{
+							Name:  "duration",
+							Value: "1s",
+							Usage: "a duration string is a possibly signed sequence of decimal numbers, each with " +
+								"optional fraction and a unit suffix, such as '300ms', '-1.5h' or '2h45m'. " +
+								"Valid time units are 'ns', 'us' (or 'µs'), 'ms', 's', 'm', 'h'",
+						},
+						cli.StringFlag{
+							Name:  "authorization",
+							Usage: "authorization header for all requests",
+						},
+					},
+					Action: func(c *cli.Context) error {
+						urls := c.StringSlice("url")
+						f := c.Int("frequency")
+						d := c.String("duration")
+						a := c.String("authorization")
+
+						if len(urls) == 0 {
+							return fmt.Errorf("url is required")
+						}
+						if f <= 0 {
+							return fmt.Errorf("frequency cannot be <= 0")
+						}
+
+						var tgts []vegeta.Target
+						for _, u := range urls {
+							t := vegeta.Target{
+								URL:    u,
+								Method: "GET",
+							}
+							if a != "" {
+								t.Header = http.Header{
+									"Authorization": []string{a},
+								}
+							}
+							tgts = append(tgts, t)
+						}
+
+						st := vegeta.NewStaticTargeter(tgts...)
+						attacker := vegeta.NewAttacker()
+
+						var metrics vegeta.Metrics
+						rate := vegeta.Rate{Freq: f, Per: time.Second}
+						duration, err := time.ParseDuration(d)
+						if err != nil {
+							return err
+						}
+
+						fmt.Printf("running load test. Url: %v, Rate: %v, Duration: %v \n", urls, rate, duration)
+						for res := range attacker.Attack(st, rate, duration, "Load test") {
+							metrics.Add(res)
+						}
+						metrics.Close()
+						reporter := vegeta.NewTextReporter(&metrics)
+						return reporter.Report(os.Stdout)
+					},
+				},
+			},
+		},
 		func() cli.Command {
 			return cli.Command{
 				Name: "kafka",

@@ -62,6 +62,19 @@ NOTE: Flow CLI is under development, and may occasionally make backwards-incompa
 * decode base64
 
     `flow base64 decode --input "aGVsbG8="`
+    
+### test
+    
+* load test http endpoint that runs for 180 seconds with 100 requests per second and will hit 2 urls
+
+    ```sh
+    flow test http \
+     --url "https://test1.com \
+     --url "https://test2.com \
+     --frequency 100 \
+     --duration "180s" \
+     --authorization "Bearer TOKEN"
+     ```
 
 help:
 ```sh
