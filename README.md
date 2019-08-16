@@ -47,6 +47,12 @@ NOTE: Flow CLI is under development, and may occasionally make backwards-incompa
 
     `flow dynamodb delete --table-name TestTable --filter-expression "amount > :amount" --expression-attribute-values '{":amount":{"N":"100"}}'`
     
+### s3
+
+* purge all items and its versions from the bucket, items with delete markers will also be removed
+
+    `flow s3 purge --bucket-name "test-bucket"`
+    
 ### base64
     
 * encode base64
