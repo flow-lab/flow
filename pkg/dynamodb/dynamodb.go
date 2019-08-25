@@ -20,8 +20,8 @@ type flowDynamoDBClient struct {
 
 // NewFlowDynamoDBClient creates a new flow dynamoDB client.
 func NewFlowDynamoDBClient(d dynamodbiface.DynamoDBAPI) (FlowDynamoDBClient, error) {
-	client := &flowDynamoDBClient{d}
-	return client, nil
+	client := flowDynamoDBClient{d}
+	return &client, nil
 }
 
 // Delete deletes items from table. Will use filterExpression and expressionAttributeValues if given to only delete
@@ -34,10 +34,10 @@ func NewFlowDynamoDBClient(d dynamodbiface.DynamoDBAPI) (FlowDynamoDBClient, err
 // In case of error that program cannot recover the error will propagated to the client
 // and processing will be stopped.
 func (f *flowDynamoDBClient) Delete(ctx context.Context, tableName string, filterExpression *string, expressionAttributeValues *string) error {
-	describeTableInput := &dynamodb.DescribeTableInput{
+	describeTableInput := dynamodb.DescribeTableInput{
 		TableName: aws.String(tableName),
 	}
-	describeTableOutput, err := f.DynamoDBAPI.DescribeTableWithContext(ctx, describeTableInput)
+	describeTableOutput, err := f.DynamoDBAPI.DescribeTableWithContext(ctx, &describeTableInput)
 	if err != nil {
 		return err
 	}
@@ -245,13 +245,13 @@ func batchDelete(ctx context.Context, c dynamodbiface.DynamoDBAPI, tableName str
 				})
 			}
 
-			batchWriteItemInput := &dynamodb.BatchWriteItemInput{
+			batchWriteItemInput := dynamodb.BatchWriteItemInput{
 				RequestItems: map[string][]*dynamodb.WriteRequest{
 					tableName: wr,
 				},
 			}
 
-			output, err := c.BatchWriteItem(batchWriteItemInput)
+			output, err := c.BatchWriteItem(&batchWriteItemInput)
 			if err != nil {
 				deleteResults <- deleteResult{
 					err: err,
@@ -262,7 +262,10 @@ func batchDelete(ctx context.Context, c dynamodbiface.DynamoDBAPI, tableName str
 			ui := output.UnprocessedItems
 			for {
 				if len(ui) > 0 {
-					o, err := c.BatchWriteItem(&dynamodb.BatchWriteItemInput{})
+					delUi := dynamodb.BatchWriteItemInput{
+						RequestItems: ui,
+					}
+					o, err := c.BatchWriteItem(&delUi)
 					if err != nil {
 						deleteResults <- deleteResult{
 							err: err,

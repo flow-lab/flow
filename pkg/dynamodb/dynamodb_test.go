@@ -19,7 +19,7 @@ type dynamoDBMock struct {
 
 func (d *dynamoDBMock) ScanPages(input *dynamodb.ScanInput, callback func(*dynamodb.ScanOutput, bool) bool) error {
 	for i := 0; i < nrOfResults; i++ {
-		output := &dynamodb.ScanOutput{
+		output := dynamodb.ScanOutput{
 			Items: []map[string]*dynamodb.AttributeValue{
 				{
 					"id": &dynamodb.AttributeValue{
@@ -28,7 +28,7 @@ func (d *dynamoDBMock) ScanPages(input *dynamodb.ScanInput, callback func(*dynam
 				},
 			},
 		}
-		callback(output, i == 4)
+		callback(&output, i == 4)
 	}
 	return nil
 }
@@ -93,10 +93,10 @@ func TestFlowDynamoDBClient_Delete(t *testing.T) {
 
 func TestScan(t *testing.T) {
 	t.Run("Should scan", func(t *testing.T) {
-		c := &dynamoDBMock{}
+		c := dynamoDBMock{}
 
 		ctx := context.TODO()
-		scanResults := scan(ctx, c, "test", aws.String("test"), nil, 10)
+		scanResults := scan(ctx, &c, "test", aws.String("test"), nil, 10)
 		counter := 0
 		for elem := range scanResults {
 			assert.NotNil(t, elem.value)
@@ -107,10 +107,10 @@ func TestScan(t *testing.T) {
 	})
 
 	t.Run("Should send error to result channel", func(t *testing.T) {
-		c := &dynamoDBErrorMock{}
+		c := dynamoDBErrorMock{}
 
 		ctx := context.TODO()
-		scanResults := scan(ctx, c, "test", nil, nil, 10)
+		scanResults := scan(ctx, &c, "test", nil, nil, 10)
 
 		counter := 0
 		for elem := range scanResults {
@@ -124,10 +124,10 @@ func TestScan(t *testing.T) {
 
 func TestBatchDelete(t *testing.T) {
 	t.Run("Should delete", func(t *testing.T) {
-		c := &dynamoDBMock{}
+		c := dynamoDBMock{}
 		batchResults := make(chan batchResult)
 		ctx := context.TODO()
-		batchDeleteResults := batchDelete(ctx, c, "test", batchResults)
+		batchDeleteResults := batchDelete(ctx, &c, "test", batchResults)
 
 		var m []map[string]*dynamodb.AttributeValue
 		m = append(m, map[string]*dynamodb.AttributeValue{
@@ -152,11 +152,11 @@ func TestBatchDelete(t *testing.T) {
 	})
 
 	t.Run("Should send error to result channel", func(t *testing.T) {
-		c := &dynamoDBErrorMock{}
+		c := dynamoDBErrorMock{}
 
 		ctx := context.TODO()
 		batchResults := make(chan batchResult, 0)
-		scanResults := batchDelete(ctx, c, "test", batchResults)
+		scanResults := batchDelete(ctx, &c, "test", batchResults)
 
 		batchResults <- batchResult{
 			err: fmt.Errorf("test error"),
