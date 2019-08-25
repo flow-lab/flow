@@ -43,9 +43,57 @@ NOTE: Flow CLI is under development, and may occasionally make backwards-incompa
 
     `flow dynamodb delete --table-name TestTable`
 
-* delete all items frm DynamoDB "TestTable" with amount > 100
+* delete all items from DynamoDB "TestTable" with amount > 100
 
     `flow dynamodb delete --table-name TestTable --filter-expression "amount > :amount" --expression-attribute-values '{":amount":{"N":"100"}}'`
+    
+* change table capacity for **Provisioned** capacity mode
+
+    `flow dynamodb capacity --table-name TestTable --write 10 --read 10`
+    
+* describe table
+
+    `flow dynamodb describe-table --table-name test`
+    
+* put item(s) from file
+
+    `flow dynamodb put-item --input input.json --table-name TestTable`
+
+    where, file input.json contains a list of json objects in dynamodb item format:
+    ```json
+    [
+        {
+          "id": {
+            "S": "1"
+          },
+          "val": {
+            "S": "1"
+          }
+        }
+    ]
+    ```
+    
+* delete item(s) from file
+
+    `flow dynamodb delete-item --input input.json --table-name TestTable`
+
+    where, file input.json contains a list of json objects in dynamodb item format:
+    ```json
+    [
+        {
+          "id": {
+            "S": "1"
+          },
+          "val": {
+            "S": "1"
+          }
+        }
+    ]
+    ``` 
+    
+* count items using scan operation
+
+    `flow dynamodb count-item --table-name TestTable`    
     
 ### s3
 

@@ -151,16 +151,15 @@ func main() {
 								Value: "",
 							},
 							cli.StringFlag{
-								Name:  "table-name",
-								Value: "",
+								Name: "table-name",
 							},
-							cli.StringFlag{
+							cli.Int64Flag{
 								Name:  "read",
-								Value: "10",
+								Value: int64(10),
 							},
-							cli.StringFlag{
+							cli.Int64Flag{
 								Name:  "write",
-								Value: "10",
+								Value: int64(10),
 							},
 							cli.StringSliceFlag{
 								Name: "global-secondary-index",
@@ -169,24 +168,18 @@ func main() {
 						Action: func(c *cli.Context) error {
 							profile := c.String("profile")
 							tableName := c.String("table-name")
+							read := c.Int64("read")
+							write := c.Int64("write")
 							gsis := c.StringSlice("global-secondary-index")
 
-							read, err := strconv.ParseInt(c.String("read"), 10, 0)
-							if err != nil {
-								return err
-							}
-
-							write, err := strconv.ParseInt(c.String("write"), 10, 0)
-							if err != nil {
-								return err
+							if tableName == "" {
+								return fmt.Errorf("table-name is required")
 							}
 
 							sess := session.NewSessionWithSharedProfile(profile)
-
 							ddbc := dynamodb.New(sess)
 
-							var input *dynamodb.UpdateTableInput
-
+							var input dynamodb.UpdateTableInput
 							if len(gsis) > 0 {
 								var gsiu []*dynamodb.GlobalSecondaryIndexUpdate
 								for _, indexName := range gsis {
@@ -201,12 +194,12 @@ func main() {
 									})
 								}
 
-								input = &dynamodb.UpdateTableInput{
+								input = dynamodb.UpdateTableInput{
 									GlobalSecondaryIndexUpdates: gsiu,
 									TableName:                   aws.String(tableName),
 								}
 							} else {
-								input = &dynamodb.UpdateTableInput{
+								input = dynamodb.UpdateTableInput{
 									ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
 										ReadCapacityUnits:  aws.Int64(read),
 										WriteCapacityUnits: aws.Int64(write),
@@ -215,14 +208,10 @@ func main() {
 								}
 							}
 
-							update, err := ddbc.UpdateTable(input)
+							update, err := ddbc.UpdateTable(&input)
 							fmt.Printf("updated %v", update)
 
-							if err != nil {
-								return err
-							}
-
-							return nil
+							return err
 						},
 					},
 					{
@@ -242,22 +231,19 @@ func main() {
 							profile := c.String("profile")
 							tableName := c.String("table-name")
 
+							if tableName == "" {
+								return fmt.Errorf("table-name is required")
+							}
+
 							sess := session.NewSessionWithSharedProfile(profile)
-
 							ddbc := dynamodb.New(sess)
-
 							input := dynamodb.DescribeTableInput{
 								TableName: &tableName,
 							}
-
 							output, err := ddbc.DescribeTable(&input)
-							fmt.Printf("updated %v", output)
+							fmt.Printf("%v", output)
 
-							if err != nil {
-								return err
-							}
-
-							return nil
+							return err
 						},
 					},
 					{
@@ -277,8 +263,11 @@ func main() {
 							profile := c.String("profile")
 							tableName := c.String("table-name")
 
-							sess := session.NewSessionWithSharedProfile(profile)
+							if tableName == "" {
+								return fmt.Errorf("table-name is required")
+							}
 
+							sess := session.NewSessionWithSharedProfile(profile)
 							ddbc := dynamodb.New(sess)
 
 							params := dynamodb.ScanInput{
@@ -400,7 +389,7 @@ func main() {
 								Value: "",
 							},
 							cli.StringFlag{
-								Name:  "keys",
+								Name:  "input",
 								Value: "",
 							},
 							cli.StringFlag{
@@ -411,19 +400,19 @@ func main() {
 						Action: func(c *cli.Context) error {
 							profile := c.String("profile")
 							tableName := c.String("table-name")
-							keys := c.String("keys")
+							input := c.String("input")
 							var items []map[string]*dynamodb.AttributeValue
 
 							if tableName == "" {
 								return fmt.Errorf("missing --table-name parameter")
 							}
-							if keys == "" {
-								return fmt.Errorf("missing --keys parameter")
+							if input == "" {
+								return fmt.Errorf("missing --input parameter")
 							}
 
-							jsonFile, err := os.Open(keys)
+							jsonFile, err := os.Open(input)
 							if err != nil {
-								fmt.Printf("Error when opening %v \n", keys)
+								fmt.Printf("Error when opening %v \n", input)
 								return err
 							}
 							defer jsonFile.Close()
