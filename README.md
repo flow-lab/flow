@@ -100,7 +100,19 @@ NOTE: Flow CLI is under development, and may occasionally make backwards-incompa
 * purge all items and its versions from the bucket, items with delete markers will also be removed
 
     `flow s3 purge --bucket-name "test-bucket"`
+
+### ssm
+
+* export all ssm parameters and their values to json file
+
+    `flow ssm export`
+
+### apigateway
+
+* exports all API specifications in swagger or oas3 specification and saves to file(s)
     
+    `flow apigateway export`
+
 ### base64
     
 * encode base64

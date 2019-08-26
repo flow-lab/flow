@@ -1540,7 +1540,7 @@ func main() {
 				Subcommands: []cli.Command{
 					{
 						Name:  "export",
-						Usage: "exports ssm parameters and their values to json",
+						Usage: "exports all ssm parameters and their values to json",
 						Flags: []cli.Flag{
 							cli.StringFlag{
 								Name:  "output-file-name",
@@ -1564,11 +1564,8 @@ func main() {
 								fmt.Println(output.Parameters)
 								for _, elem := range output.Parameters {
 									param := ssm.GetParameterInput{
-										Name: elem.Name,
-										WithDecryption: func() *bool {
-											var b = true
-											return &b
-										}(),
+										Name:           elem.Name,
+										WithDecryption: aws.Bool(true),
 									}
 									out, _ := ssmc.GetParameter(&param)
 
@@ -1580,16 +1577,16 @@ func main() {
 								return lastPage == false
 							})
 							if err != nil {
-								panic(err)
+								return err
 							}
 
 							b, err := json.Marshal(parameters)
 							if err != nil {
-								panic(err)
+								return err
 							}
-							_ = ioutil.WriteFile(outFileName, b, 0644)
+							err = ioutil.WriteFile(outFileName, b, 0644)
 							fmt.Printf("wrote to %v", outFileName)
-							return nil
+							return err
 						},
 					},
 				},
@@ -2127,8 +2124,13 @@ func main() {
 							cli.StringFlag{
 								Name:  "file-type",
 								Value: "yaml",
+								Usage: "'json' or 'yaml'",
 							},
-
+							cli.StringFlag{
+								Name:  "export-type",
+								Value: "oas30",
+								Usage: "'oas30' for OpenAPI 3.0.x and 'swagger' for Swagger/OpenAPI 2.0",
+							},
 							cli.StringFlag{
 								Name:  "profile",
 								Value: "",
@@ -2137,6 +2139,7 @@ func main() {
 						Action: func(c *cli.Context) error {
 							profile := c.String("profile")
 							fileType := c.String("file-type")
+							exportType := c.String("export-type")
 
 							sess := session.NewSessionWithSharedProfile(profile)
 							apig := apigateway.New(sess)
@@ -2144,7 +2147,7 @@ func main() {
 							input := apigateway.GetRestApisInput{}
 							output, err := apig.GetRestApis(&input)
 							if err != nil {
-								panic(err)
+								return err
 							}
 
 							if len(output.Items) > 0 {
@@ -2154,7 +2157,7 @@ func main() {
 									}
 									getStagesOutput, err := apig.GetStages(&getStageInput)
 									if err != nil {
-										panic(err)
+										return err
 									}
 
 									for _, deployment := range getStagesOutput.Item {
@@ -2162,28 +2165,28 @@ func main() {
 											Accepts:    aws.String(fmt.Sprintf("application/%s", fileType)),
 											RestApiId:  restAPI.Id,
 											StageName:  deployment.StageName,
-											ExportType: aws.String("oas30"),
+											ExportType: aws.String(exportType),
 											Parameters: map[string]*string{
 												"extensions": aws.String("documentation"),
 											},
 										}
 										getExportOutput, err := apig.GetExport(&exportInput)
 										if err != nil {
-											panic(err)
+											return err
 										}
 
 										var destFileName string
 										name := strings.Replace(*restAPI.Name, " ", "", -1)
 										if restAPI.Version != nil {
-											destFileName = fmt.Sprintf("%s-%s.oas3.yml", name, *restAPI.Version)
+											destFileName = fmt.Sprintf("%s-%s.%s.yml", name, *restAPI.Version, exportType)
 										} else {
-											destFileName = fmt.Sprintf("%s.oas3.yml", name)
+											destFileName = fmt.Sprintf("%s.%s.yml", name, exportType)
 										}
 
-										fmt.Printf("saved: %s\n", destFileName)
 										err = ioutil.WriteFile(destFileName, getExportOutput.Body, 0644)
+										fmt.Printf("saved: %s\n", destFileName)
 										if err != nil {
-											panic(err)
+											return err
 										}
 									}
 								}
