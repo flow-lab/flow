@@ -28,10 +28,10 @@ func NewFlowDynamoDBClient(d dynamodbiface.DynamoDBAPI) (FlowDynamoDBClient, err
 // items defined or will delete all otherwise(purged).
 //
 // Implementation follows pipeline where:
-// scan (generator) -> mapToPrimaryKey (stage) -> batch (stage) -> batchDelete (stage) -> client
+// scan (generator) -> batch (stage) -> batchDelete (stage) -> client
 // Each stage is no blocking and is using channels for communication.
 //
-// In case of error that program cannot recover the error will propagated to the client
+// In case of error that program cannot recover the error will be propagated to the client
 // and processing will be stopped.
 func (f *flowDynamoDBClient) Delete(ctx context.Context, tableName string, filterExpression *string, expressionAttributeValues *string) error {
 	describeTableInput := dynamodb.DescribeTableInput{
@@ -42,9 +42,9 @@ func (f *flowDynamoDBClient) Delete(ctx context.Context, tableName string, filte
 		return err
 	}
 
-	sr := scan(ctx, f.DynamoDBAPI, tableName, filterExpression, expressionAttributeValues, 100)
-	pkr := mapToPrimaryKey(ctx, describeTableOutput.Table.KeySchema, sr)
-	br := batch(ctx, 25, pkr)
+	attr := projectionExpression(describeTableOutput.Table.KeySchema)
+	sr := scan(ctx, f.DynamoDBAPI, tableName, filterExpression, expressionAttributeValues, attr, 100)
+	br := batch(ctx, 25, sr)
 	dr := batchDelete(ctx, f.DynamoDBAPI, tableName, br)
 
 	for r := range dr {
@@ -54,6 +54,17 @@ func (f *flowDynamoDBClient) Delete(ctx context.Context, tableName string, filte
 	}
 
 	return nil
+}
+
+func projectionExpression(keySchemaElements []*dynamodb.KeySchemaElement) *string {
+	var attr string
+	for i, e := range keySchemaElements {
+		attr = attr + *e.AttributeName
+		if i < len(keySchemaElements)-1 {
+			attr = attr + ","
+		}
+	}
+	return &attr
 }
 
 // scanResult represents the result of scan operation.
@@ -66,11 +77,11 @@ type scanResult struct {
 //
 // Result channel is initialized with the specified
 // buffer capacity if bufferSize > 0. If zero, the channel is unbuffered.
-func scan(ctx context.Context, c dynamodbiface.DynamoDBAPI, tableName string, filterExpression *string, expressionAttributeValues *string, bufferSize int) <-chan scanResult {
+func scan(ctx context.Context, c dynamodbiface.DynamoDBAPI, tableName string, filterExpression *string, expressionAttributeValues *string, projectionExpression *string, bufferSize int) <-chan scanResult {
 	scanResults := make(chan scanResult, bufferSize)
 	go func(scanResults chan<- scanResult) {
 		defer close(scanResults)
-		scanInput := &dynamodb.ScanInput{
+		scanInput := dynamodb.ScanInput{
 			TableName: &tableName,
 		}
 		if filterExpression != nil {
@@ -87,7 +98,10 @@ func scan(ctx context.Context, c dynamodbiface.DynamoDBAPI, tableName string, fi
 			}
 			scanInput.ExpressionAttributeValues = m
 		}
-		err := c.ScanPages(scanInput, func(output *dynamodb.ScanOutput, lastPage bool) bool {
+		if projectionExpression != nil {
+			scanInput.ProjectionExpression = projectionExpression
+		}
+		err := c.ScanPages(&scanInput, func(output *dynamodb.ScanOutput, lastPage bool) bool {
 			for _, item := range output.Items {
 				scanResults <- scanResult{
 					value: item,
@@ -113,56 +127,15 @@ func scan(ctx context.Context, c dynamodbiface.DynamoDBAPI, tableName string, fi
 	return scanResults
 }
 
-type mapToPrimaryKeyResult struct {
-	err   error
-	value map[string]*dynamodb.AttributeValue
-}
-
-// mapToPrimaryKey will map item to only primary keys so it can be used as input to delete.
-//
-func mapToPrimaryKey(ctx context.Context, keySchemaElement []*dynamodb.KeySchemaElement, scanResults <-chan scanResult) <-chan mapToPrimaryKeyResult {
-	mapToPrimaryKeyResults := make(chan mapToPrimaryKeyResult)
-	go func(in <-chan scanResult) {
-		defer close(mapToPrimaryKeyResults)
-
-		for k := range in {
-			if k.err != nil {
-				mapToPrimaryKeyResults <- mapToPrimaryKeyResult{
-					err: k.err,
-				}
-				return
-			}
-
-			key := make(map[string]*dynamodb.AttributeValue)
-			for _, ks := range keySchemaElement {
-				an := aws.StringValue(ks.AttributeName)
-				key[an] = (k.value)[an]
-			}
-
-			mapToPrimaryKeyResults <- mapToPrimaryKeyResult{
-				value: key,
-			}
-
-			select {
-			case <-ctx.Done():
-				return
-			default:
-			}
-		}
-	}(scanResults)
-
-	return mapToPrimaryKeyResults
-}
-
 type batchResult struct {
 	err   error
 	value []map[string]*dynamodb.AttributeValue
 }
 
 // batch up to batchSize
-func batch(ctx context.Context, batchSize int, mapToPrimaryKeyResults <-chan mapToPrimaryKeyResult) <-chan batchResult {
+func batch(ctx context.Context, batchSize int, scanResults <-chan scanResult) <-chan batchResult {
 	batchResults := make(chan batchResult)
-	go func(mapToPrimaryKeyResults <-chan mapToPrimaryKeyResult) {
+	go func(mapToPrimaryKeyResults <-chan scanResult) {
 		defer close(batchResults)
 
 		b := make([]map[string]*dynamodb.AttributeValue, 0)
@@ -198,7 +171,7 @@ func batch(ctx context.Context, batchSize int, mapToPrimaryKeyResults <-chan map
 			default:
 			}
 		}
-	}(mapToPrimaryKeyResults)
+	}(scanResults)
 
 	return batchResults
 }
@@ -206,14 +179,14 @@ func batch(ctx context.Context, batchSize int, mapToPrimaryKeyResults <-chan map
 func clone(src []map[string]*dynamodb.AttributeValue) []map[string]*dynamodb.AttributeValue {
 	var dest []map[string]*dynamodb.AttributeValue
 	for _, i := range src {
+		m := map[string]*dynamodb.AttributeValue{}
 		for key, val := range i {
 			if val != nil {
 				v := *val
-				dest = append(dest, map[string]*dynamodb.AttributeValue{
-					key: &v,
-				})
+				m[key] = &v
 			}
 		}
+		dest = append(dest, m)
 	}
 
 	return dest

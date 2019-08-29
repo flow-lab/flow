@@ -96,7 +96,7 @@ func TestScan(t *testing.T) {
 		c := dynamoDBMock{}
 
 		ctx := context.TODO()
-		scanResults := scan(ctx, &c, "test", aws.String("test"), nil, 10)
+		scanResults := scan(ctx, &c, "test", aws.String("test"), nil, nil, 10)
 		counter := 0
 		for elem := range scanResults {
 			assert.NotNil(t, elem.value)
@@ -110,7 +110,7 @@ func TestScan(t *testing.T) {
 		c := dynamoDBErrorMock{}
 
 		ctx := context.TODO()
-		scanResults := scan(ctx, &c, "test", nil, nil, 10)
+		scanResults := scan(ctx, &c, "test", nil, nil, nil, 10)
 
 		counter := 0
 		for elem := range scanResults {
@@ -172,81 +172,13 @@ func TestBatchDelete(t *testing.T) {
 	})
 }
 
-func TestMapToPrimaryKey(t *testing.T) {
-	t.Run("Should map to primary key", func(t *testing.T) {
-		scanResults := make(chan scanResult)
-		ctx := context.TODO()
-
-		dto := dynamodb.DescribeTableOutput{
-			Table: &dynamodb.TableDescription{
-				KeySchema: []*dynamodb.KeySchemaElement{
-					{
-						AttributeName: aws.String("id"),
-						KeyType:       aws.String("S"),
-					},
-				},
-			},
-		}
-
-		out := mapToPrimaryKey(ctx, dto.Table.KeySchema, scanResults)
-
-		scanResult := scanResult{
-			value: map[string]*dynamodb.AttributeValue{
-				"id": {
-					S: aws.String("1"),
-				},
-				"apud": {
-					S: aws.String("test"),
-				},
-			},
-		}
-
-		go func() {
-			scanResults <- scanResult
-			close(scanResults)
-		}()
-
-		counter := 0
-		for r := range out {
-			assert.Equal(t, "1", aws.StringValue(r.value["id"].S))
-			assert.Nil(t, r.value["apud"])
-			counter++
-		}
-
-		assert.Equal(t, 1, counter)
-	})
-
-	t.Run("Should send error to result channel", func(t *testing.T) {
-		ctx := context.TODO()
-		scanResults := make(chan scanResult)
-		mapToPrimaryKeyResults := mapToPrimaryKey(ctx, []*dynamodb.KeySchemaElement{
-			{
-				AttributeName: aws.String("id"),
-				KeyType:       aws.String("S"),
-			},
-		}, scanResults)
-
-		scanResults <- scanResult{
-			err: fmt.Errorf("test error"),
-		}
-
-		counter := 0
-		for elem := range mapToPrimaryKeyResults {
-			assert.NotNil(t, elem.err)
-			counter++
-		}
-
-		assert.Equal(t, 1, counter)
-	})
-}
-
 func TestBatch(t *testing.T) {
 	t.Run("Should batch", func(t *testing.T) {
-		mapToPrimaryKeyResults := make(chan mapToPrimaryKeyResult)
+		scanResults := make(chan scanResult)
 		ctx := context.TODO()
-		batchResults := batch(ctx, 25, mapToPrimaryKeyResults)
+		batchResults := batch(ctx, 25, scanResults)
 
-		mapToPrimaryKeyResult := mapToPrimaryKeyResult{
+		scanResult := scanResult{
 			value: map[string]*dynamodb.AttributeValue{
 				"id": {
 					S: aws.String("1"),
@@ -256,9 +188,9 @@ func TestBatch(t *testing.T) {
 
 		go func() {
 			for i := 0; i < 60; i++ {
-				mapToPrimaryKeyResults <- mapToPrimaryKeyResult
+				scanResults <- scanResult
 			}
-			close(mapToPrimaryKeyResults)
+			close(scanResults)
 		}()
 
 		counter := 0
@@ -272,10 +204,10 @@ func TestBatch(t *testing.T) {
 
 	t.Run("Should send error to result channel", func(t *testing.T) {
 		ctx := context.TODO()
-		mapToPrimaryKeyResults := make(chan mapToPrimaryKeyResult)
-		batchResults := batch(ctx, 1, mapToPrimaryKeyResults)
+		scanResults := make(chan scanResult)
+		batchResults := batch(ctx, 1, scanResults)
 
-		mapToPrimaryKeyResults <- mapToPrimaryKeyResult{
+		scanResults <- scanResult{
 			err: fmt.Errorf("test error"),
 		}
 
@@ -296,6 +228,9 @@ func TestClone(t *testing.T) {
 				"id": &dynamodb.AttributeValue{
 					S: aws.String("test0"),
 				},
+				"test": &dynamodb.AttributeValue{
+					S: aws.String("test1"),
+				},
 			},
 		}
 
@@ -303,6 +238,40 @@ func TestClone(t *testing.T) {
 
 		src[0]["id"].S = aws.String("test1")
 
+		assert.Equal(t, 1, len(dst))
 		assert.Equal(t, "test0", aws.StringValue(dst[0]["id"].S))
+		assert.Equal(t, "test1", aws.StringValue(dst[0]["test"].S))
+	})
+}
+
+func TestProjectionExpression(t *testing.T) {
+	t.Run("Should crate projection expression from one keys", func(t *testing.T) {
+		keySchemas := []*dynamodb.KeySchemaElement{
+			{
+				AttributeName: aws.String("id"),
+				KeyType:       aws.String("S"),
+			},
+		}
+
+		exp := projectionExpression(keySchemas)
+
+		assert.Equal(t, "id", *exp)
+	})
+
+	t.Run("Should crate projection expression from many keys", func(t *testing.T) {
+		keySchemas := []*dynamodb.KeySchemaElement{
+			{
+				AttributeName: aws.String("id"),
+				KeyType:       aws.String("S"),
+			},
+			{
+				AttributeName: aws.String("date"),
+				KeyType:       aws.String("S"),
+			},
+		}
+
+		exp := projectionExpression(keySchemas)
+
+		assert.Equal(t, "id,date", *exp)
 	})
 }
