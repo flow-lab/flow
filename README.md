@@ -32,7 +32,7 @@ NOTE: Flow CLI is under development, and may occasionally make backwards-incompa
     ```sh
     go get -u github.com/flow-lab/flow
     cd $GOPATH/src/github.com/flow-lab/flow
-    go install
+    go install ./...
     ```
 
 ## example usage:
