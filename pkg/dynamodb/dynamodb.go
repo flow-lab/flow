@@ -135,13 +135,13 @@ type batchResult struct {
 // batch up to batchSize
 func batch(ctx context.Context, batchSize int, scanResults <-chan scanResult) <-chan batchResult {
 	batchResults := make(chan batchResult)
-	go func(mapToPrimaryKeyResults <-chan scanResult) {
+	go func(scanResults <-chan scanResult) {
 		defer close(batchResults)
 
 		b := make([]map[string]*dynamodb.AttributeValue, 0)
 		for {
 			select {
-			case r, ok := <-mapToPrimaryKeyResults:
+			case r, ok := <-scanResults:
 				if r.err != nil {
 					batchResults <- batchResult{
 						err: r.err,
