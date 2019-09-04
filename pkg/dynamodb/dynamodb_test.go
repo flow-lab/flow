@@ -253,12 +253,12 @@ func TestProjectionExpression(t *testing.T) {
 			},
 		}
 
-		exp := projectionExpression(keySchemas)
+		exp, _ := projectionExpressionNew(keySchemas)
 
 		assert.Equal(t, "id", *exp)
 	})
 
-	t.Run("Should crate projection expression from many keys", func(t *testing.T) {
+	t.Run("Should crate projection expression from many keys with expression attribute names", func(t *testing.T) {
 		keySchemas := []*dynamodb.KeySchemaElement{
 			{
 				AttributeName: aws.String("id"),
@@ -270,8 +270,10 @@ func TestProjectionExpression(t *testing.T) {
 			},
 		}
 
-		exp := projectionExpression(keySchemas)
+		expression, expressionAttributeNames := projectionExpressionNew(keySchemas)
 
-		assert.Equal(t, "id,date", *exp)
+		assert.Equal(t, "#id-0,#date-1", *expression)
+
+		assert.Equal(t, "{\"#date-1\":\"date\",\"#id-0\":\"id\"}", *expressionAttributeNames)
 	})
 }

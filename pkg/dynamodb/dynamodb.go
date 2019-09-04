@@ -67,6 +67,23 @@ func projectionExpression(keySchemaElements []*dynamodb.KeySchemaElement) *strin
 	return &attr
 }
 
+// TODO [grokrz]: refactor
+func projectionExpressionNew(keySchemaElements []*dynamodb.KeySchemaElement) (projectionExpression *string, expressionAttributeNames *string) {
+	var attr string
+	m := make(map[string]string)
+	for i, e := range keySchemaElements {
+		a := fmt.Sprintf("#%s-%d", *e.AttributeName, i)
+		attr = attr + a
+		if i < len(keySchemaElements)-1 {
+			attr = attr + ","
+		}
+		m[a] = *e.AttributeName
+	}
+	bytes, _ := json.Marshal(m)
+	s := string(bytes)
+	return &attr, &s
+}
+
 // scanResult represents the result of scan operation.
 type scanResult struct {
 	err   error
