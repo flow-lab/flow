@@ -106,6 +106,20 @@ NOTE: Flow CLI is under development, and may occasionally make backwards-incompa
 * export all ssm parameters and their values to json file
 
     `flow ssm export`
+    
+### sqs
+
+* receive message from queue
+
+    `flow sqs receive-message --queue-name apud`
+
+* purge all messages
+
+    `flow sqs purge --queue-name apud`
+    
+* describe sqs queue
+
+    `flow sqs describe --queue-name apud`
 
 ### apigateway
 

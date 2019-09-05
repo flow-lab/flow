@@ -1114,6 +1114,10 @@ func main() {
 								Name:  "queue-name",
 								Value: "",
 							},
+							cli.Int64Flag{
+								Name:  "max-number-of-messages",
+								Value: 10,
+							},
 							cli.StringFlag{
 								Name:  "profile",
 								Value: "",
@@ -1122,6 +1126,7 @@ func main() {
 						Action: func(c *cli.Context) error {
 							profile := c.String("profile")
 							queueName := c.String("queue-name")
+							maxNumberOfMessages := c.Int64("max-number-of-messages")
 							sess := session.NewSessionWithSharedProfile(profile)
 
 							sqsc := sqs.New(sess)
@@ -1135,13 +1140,15 @@ func main() {
 							for _, elem := range resp.QueueUrls {
 								if strings.Contains(*elem, queueName) {
 									params := sqs.ReceiveMessageInput{
-										QueueUrl: elem,
+										QueueUrl:            elem,
+										MaxNumberOfMessages: aws.Int64(maxNumberOfMessages),
+										AttributeNames:      []*string{aws.String("All")},
 									}
 									resp, err := sqsc.ReceiveMessage(&params)
 									if err != nil {
 										return err
 									}
-									for msg := range resp.Messages {
+									for _, msg := range resp.Messages {
 										fmt.Printf("%v\n", msg)
 									}
 								}
