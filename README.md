@@ -109,7 +109,11 @@ NOTE: Flow CLI is under development, and may occasionally make backwards-incompa
     
 ### sqs
 
-* receive message from queue
+* send message to the queue
+
+    `flow sqs send --queue-name apud --input '{"id":"1","status":"ACTIVE"}' --message-attributes '{"eventType":{"DataType":"String","StringValue":"STATUS_UPDATED"}}'`
+
+* receive message from the queue
 
     `flow sqs receive-message --queue-name apud`
 
