@@ -4,7 +4,7 @@ deps:
 tidy:
 	@go mod tidy
 
-test: generate
+test:
 	@go test -covermode=atomic -installsuffix "static" ./...
 
 build:

@@ -3,26 +3,9 @@ package kafka
 import (
 	"fmt"
 	"github.com/Shopify/sarama"
+	"github.com/flow-lab/flow/pkg"
 	"time"
 )
-
-// ConfigEntry represents topic configuration
-type ConfigEntry struct {
-	Name  string
-	Value string
-}
-
-// Topic represents kafka topic
-type Topic struct {
-	Name     string         `json:"name,omitempty"`
-	Configs  []*ConfigEntry `json:"configs,omitempty"`
-	ErrorMsg *string        `json:"errorMsg,omitempty"`
-}
-
-// Metadata represents topics details
-type Metadata struct {
-	Topics []*Topic
-}
 
 type config struct {
 	saramaConfig    *sarama.Config
@@ -35,8 +18,8 @@ type config struct {
 type FlowKafka interface {
 	CreateTopic(topic string, numPartitions int, replicationFactor int, retentionMs string) error
 	DeleteTopic(topic string) error
-	DescribeTopic(topic ...string) ([]*Topic, error)
-	GetMetadata() (*Metadata, error)
+	DescribeTopic(topic ...string) ([]*pkg.Topic, error)
+	GetMetadata() (*pkg.Metadata, error)
 	Produce(topic string, msg []byte) error
 }
 
@@ -215,7 +198,7 @@ func (ss *saramaService) DeleteTopic(topic string) error {
 	return nil
 }
 
-func (ss *saramaService) DescribeTopic(topics ...string) ([]*Topic, error) {
+func (ss *saramaService) DescribeTopic(topics ...string) ([]*pkg.Topic, error) {
 	err := ss.broker.Open(ss.config.saramaConfig)
 	if err != nil {
 		return nil, fmt.Errorf("unable to connect to broker: %v", err)
@@ -245,10 +228,10 @@ func (ss *saramaService) DescribeTopic(topics ...string) ([]*Topic, error) {
 		return nil, fmt.Errorf("unable to get config. Err: %s", err)
 	}
 
-	var resTopics []*Topic
+	var resTopics []*pkg.Topic
 	for _, r := range response.Resources {
 		if r.ErrorCode != 0 {
-			resTopics = append(resTopics, &Topic{
+			resTopics = append(resTopics, &pkg.Topic{
 				Name: r.Name,
 				ErrorMsg: func() *string {
 					p := sarama.KError(r.ErrorCode).Error()
@@ -259,15 +242,15 @@ func (ss *saramaService) DescribeTopic(topics ...string) ([]*Topic, error) {
 			continue
 		}
 
-		var configEntries []*ConfigEntry
+		var configEntries []*pkg.ConfigEntry
 		for _, ce := range r.Configs {
-			configEntries = append(configEntries, &ConfigEntry{
+			configEntries = append(configEntries, &pkg.ConfigEntry{
 				Name:  ce.Name,
 				Value: ce.Value,
 			})
 		}
 
-		resTopics = append(resTopics, &Topic{
+		resTopics = append(resTopics, &pkg.Topic{
 			Name:    r.Name,
 			Configs: configEntries,
 		})
@@ -276,7 +259,7 @@ func (ss *saramaService) DescribeTopic(topics ...string) ([]*Topic, error) {
 	return resTopics, nil
 }
 
-func (ss *saramaService) GetMetadata() (*Metadata, error) {
+func (ss *saramaService) GetMetadata() (*pkg.Metadata, error) {
 	err := ss.broker.Open(ss.config.saramaConfig)
 	if err != nil {
 		return nil, fmt.Errorf("unable to connect to broker: %v", err)
@@ -293,14 +276,14 @@ func (ss *saramaService) GetMetadata() (*Metadata, error) {
 		return nil, fmt.Errorf("unable to get config. Err: %s", err)
 	}
 
-	var resTopics []*Topic
+	var resTopics []*pkg.Topic
 	for _, r := range response.Topics {
-		resTopics = append(resTopics, &Topic{
+		resTopics = append(resTopics, &pkg.Topic{
 			Name: r.Name,
 		})
 	}
 
-	return &Metadata{
+	return &pkg.Metadata{
 		Topics: resTopics,
 	}, nil
 }

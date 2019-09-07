@@ -6,7 +6,7 @@ package mocks
 
 import (
 	sarama "github.com/Shopify/sarama"
-	kafka "github.com/flow-lab/flow/pkg/kafka"
+	pkg "github.com/flow-lab/flow/pkg"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
@@ -63,14 +63,14 @@ func (mr *MockFlowKafkaMockRecorder) DeleteTopic(topic interface{}) *gomock.Call
 }
 
 // DescribeTopic mocks base method
-func (m *MockFlowKafka) DescribeTopic(topic ...string) ([]*kafka.Topic, error) {
+func (m *MockFlowKafka) DescribeTopic(topic ...string) ([]*pkg.Topic, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{}
 	for _, a := range topic {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "DescribeTopic", varargs...)
-	ret0, _ := ret[0].([]*kafka.Topic)
+	ret0, _ := ret[0].([]*pkg.Topic)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -82,10 +82,10 @@ func (mr *MockFlowKafkaMockRecorder) DescribeTopic(topic ...interface{}) *gomock
 }
 
 // GetMetadata mocks base method
-func (m *MockFlowKafka) GetMetadata() (*kafka.Metadata, error) {
+func (m *MockFlowKafka) GetMetadata() (*pkg.Metadata, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetMetadata")
-	ret0, _ := ret[0].(*kafka.Metadata)
+	ret0, _ := ret[0].(*pkg.Metadata)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
