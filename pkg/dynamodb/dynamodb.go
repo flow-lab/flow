@@ -42,8 +42,8 @@ func (f *flowDynamoDBClient) Delete(ctx context.Context, tableName string, filte
 		return err
 	}
 
-	attr := projectionExpression(describeTableOutput.Table.KeySchema)
-	sr := scan(ctx, f.DynamoDBAPI, tableName, filterExpression, expressionAttributeValues, attr, 100)
+	prEx, attr := projectionExpression(describeTableOutput.Table.KeySchema)
+	sr := scan(ctx, f.DynamoDBAPI, tableName, filterExpression, expressionAttributeValues, prEx, attr, 100)
 	br := batch(ctx, 25, sr)
 	dr := batchDelete(ctx, f.DynamoDBAPI, tableName, br)
 
@@ -56,32 +56,18 @@ func (f *flowDynamoDBClient) Delete(ctx context.Context, tableName string, filte
 	return nil
 }
 
-func projectionExpression(keySchemaElements []*dynamodb.KeySchemaElement) *string {
+func projectionExpression(keySchemaElements []*dynamodb.KeySchemaElement) (projectionExpression *string, expressionAttributeNames map[string]*string) {
 	var attr string
+	m := make(map[string]*string)
 	for i, e := range keySchemaElements {
-		attr = attr + *e.AttributeName
-		if i < len(keySchemaElements)-1 {
-			attr = attr + ","
-		}
-	}
-	return &attr
-}
-
-// TODO [grokrz]: refactor
-func projectionExpressionNew(keySchemaElements []*dynamodb.KeySchemaElement) (projectionExpression *string, expressionAttributeNames *string) {
-	var attr string
-	m := make(map[string]string)
-	for i, e := range keySchemaElements {
-		a := fmt.Sprintf("#%s-%d", *e.AttributeName, i)
+		a := fmt.Sprintf("#%s%d", *e.AttributeName, i)
 		attr = attr + a
 		if i < len(keySchemaElements)-1 {
-			attr = attr + ","
+			attr = attr + ", "
 		}
-		m[a] = *e.AttributeName
+		m[a] = e.AttributeName
 	}
-	bytes, _ := json.Marshal(m)
-	s := string(bytes)
-	return &attr, &s
+	return &attr, m
 }
 
 // scanResult represents the result of scan operation.
@@ -94,7 +80,7 @@ type scanResult struct {
 //
 // Result channel is initialized with the specified
 // buffer capacity if bufferSize > 0. If zero, the channel is unbuffered.
-func scan(ctx context.Context, c dynamodbiface.DynamoDBAPI, tableName string, filterExpression *string, expressionAttributeValues *string, projectionExpression *string, bufferSize int) <-chan scanResult {
+func scan(ctx context.Context, c dynamodbiface.DynamoDBAPI, tableName string, filterExpression *string, expressionAttributeValues *string, projectionExpression *string, expressionAttributeNames map[string]*string, bufferSize int) <-chan scanResult {
 	scanResults := make(chan scanResult, bufferSize)
 	go func(scanResults chan<- scanResult) {
 		defer close(scanResults)
@@ -117,6 +103,9 @@ func scan(ctx context.Context, c dynamodbiface.DynamoDBAPI, tableName string, fi
 		}
 		if projectionExpression != nil {
 			scanInput.ProjectionExpression = projectionExpression
+		}
+		if expressionAttributeNames != nil {
+			scanInput.ExpressionAttributeNames = expressionAttributeNames
 		}
 		err := c.ScanPages(&scanInput, func(output *dynamodb.ScanOutput, lastPage bool) bool {
 			for _, item := range output.Items {

@@ -96,7 +96,7 @@ func TestScan(t *testing.T) {
 		c := dynamoDBMock{}
 
 		ctx := context.TODO()
-		scanResults := scan(ctx, &c, "test", aws.String("test"), nil, nil, 10)
+		scanResults := scan(ctx, &c, "test", aws.String("test"), nil, nil, nil, 10)
 		counter := 0
 		for elem := range scanResults {
 			assert.NotNil(t, elem.value)
@@ -110,7 +110,7 @@ func TestScan(t *testing.T) {
 		c := dynamoDBErrorMock{}
 
 		ctx := context.TODO()
-		scanResults := scan(ctx, &c, "test", nil, nil, nil, 10)
+		scanResults := scan(ctx, &c, "test", nil, nil, nil, nil, 10)
 
 		counter := 0
 		for elem := range scanResults {
@@ -245,19 +245,6 @@ func TestClone(t *testing.T) {
 }
 
 func TestProjectionExpression(t *testing.T) {
-	t.Run("Should crate projection expression from one keys", func(t *testing.T) {
-		keySchemas := []*dynamodb.KeySchemaElement{
-			{
-				AttributeName: aws.String("id"),
-				KeyType:       aws.String("S"),
-			},
-		}
-
-		exp, _ := projectionExpressionNew(keySchemas)
-
-		assert.Equal(t, "id", *exp)
-	})
-
 	t.Run("Should crate projection expression from many keys with expression attribute names", func(t *testing.T) {
 		keySchemas := []*dynamodb.KeySchemaElement{
 			{
@@ -270,10 +257,11 @@ func TestProjectionExpression(t *testing.T) {
 			},
 		}
 
-		expression, expressionAttributeNames := projectionExpressionNew(keySchemas)
+		expression, expressionAttributeNames := projectionExpression(keySchemas)
 
-		assert.Equal(t, "#id-0,#date-1", *expression)
+		assert.Equal(t, "#id0, #date1", *expression)
 
-		assert.Equal(t, "{\"#date-1\":\"date\",\"#id-0\":\"id\"}", *expressionAttributeNames)
+		assert.Equal(t, "date", *expressionAttributeNames["#date1"])
+		assert.Equal(t, "id", *expressionAttributeNames["#id0"])
 	})
 }
