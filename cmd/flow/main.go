@@ -989,6 +989,9 @@ func main() {
 								Name: "input-file-name",
 							},
 							cli.StringFlag{
+								Name: "input",
+							},
+							cli.StringFlag{
 								Name:  "message-attributes",
 								Value: "",
 							},
@@ -1000,52 +1003,70 @@ func main() {
 						Action: func(c *cli.Context) error {
 							profile := c.String("profile")
 							queueName := c.String("queue-name")
+							inputStr := c.String("input")
 							inFileName := c.String("input-file-name")
-							if inFileName == "" {
-								return fmt.Errorf("input-file-name not found")
+
+							if inputStr == "" && inFileName == "" {
+								return fmt.Errorf("input-string or input-file-name is required")
 							}
+
 							msgAttributes := c.String("message-attributes")
 							sess := session.NewSessionWithSharedProfile(profile)
 
-							jsonFile, err := os.Open(inFileName)
-							if err != nil {
-								return fmt.Errorf("error when opening %s", inFileName)
+							var byteValue []byte
+							if inFileName != "" {
+								jsonFile, err := os.Open(inFileName)
+								if err != nil {
+									return fmt.Errorf("error when opening %s", inFileName)
+								}
+								byteValue, err = ioutil.ReadAll(jsonFile)
+								if err != nil {
+									return err
+								}
+								defer jsonFile.Close()
+							} else {
+								byteValue = []byte(inputStr)
 							}
-							byteValue, _ := ioutil.ReadAll(jsonFile)
-							defer jsonFile.Close()
+
+							var messageAttributes map[string]*sqs.MessageAttributeValue
+							if msgAttributes != "" {
+								messageAttributes = map[string]*sqs.MessageAttributeValue{}
+								err := json.Unmarshal([]byte(msgAttributes), &messageAttributes)
+								if err != nil {
+									return err
+								}
+							}
 
 							sqsc := sqs.New(sess)
-
 							params := sqs.ListQueuesInput{}
 							resp, err := sqsc.ListQueues(&params)
 							if err != nil {
 								return err
 							}
 
-							var messageAttributes map[string]*sqs.MessageAttributeValue
-
-							if msgAttributes != "" {
-								messageAttributes = map[string]*sqs.MessageAttributeValue{}
-								json.Unmarshal([]byte(msgAttributes), &messageAttributes)
-							}
-
+							var q *string
 							for _, elem := range resp.QueueUrls {
 								if strings.Contains(*elem, queueName) {
-									smi := sqs.SendMessageInput{
-										QueueUrl: elem,
-										MessageBody: func() *string {
-											s := string(byteValue[:])
-											return &s
-										}(),
-										MessageAttributes: messageAttributes,
-									}
-									_, err := sqsc.SendMessage(&smi)
-									if err != nil {
-										return err
-									}
-									fmt.Printf("Sent to %v", queueName)
+									q = elem
 								}
 							}
+							if q == nil {
+								return fmt.Errorf("queue %s does not exist", queueName)
+							}
+
+							smi := sqs.SendMessageInput{
+								QueueUrl: q,
+								MessageBody: func() *string {
+									s := string(byteValue[:])
+									return &s
+								}(),
+								MessageAttributes: messageAttributes,
+							}
+							_, err = sqsc.SendMessage(&smi)
+							if err != nil {
+								return err
+							}
+							fmt.Printf("Sent to %v", queueName)
 
 							return nil
 						},
@@ -1066,7 +1087,7 @@ func main() {
 								Name: "attribute-names",
 								Value: func() *cli.StringSlice {
 									ss := &cli.StringSlice{}
-									ss.Set("All")
+									_ = ss.Set("All")
 									return ss
 								}(),
 							},
@@ -1114,6 +1135,10 @@ func main() {
 								Name:  "queue-name",
 								Value: "",
 							},
+							cli.Int64Flag{
+								Name:  "max-number-of-messages",
+								Value: 10,
+							},
 							cli.StringFlag{
 								Name:  "profile",
 								Value: "",
@@ -1122,6 +1147,7 @@ func main() {
 						Action: func(c *cli.Context) error {
 							profile := c.String("profile")
 							queueName := c.String("queue-name")
+							maxNumberOfMessages := c.Int64("max-number-of-messages")
 							sess := session.NewSessionWithSharedProfile(profile)
 
 							sqsc := sqs.New(sess)
@@ -1135,13 +1161,15 @@ func main() {
 							for _, elem := range resp.QueueUrls {
 								if strings.Contains(*elem, queueName) {
 									params := sqs.ReceiveMessageInput{
-										QueueUrl: elem,
+										QueueUrl:            elem,
+										MaxNumberOfMessages: aws.Int64(maxNumberOfMessages),
+										AttributeNames:      []*string{aws.String("All")},
 									}
 									resp, err := sqsc.ReceiveMessage(&params)
 									if err != nil {
 										return err
 									}
-									for msg := range resp.Messages {
+									for _, msg := range resp.Messages {
 										fmt.Printf("%v\n", msg)
 									}
 								}
