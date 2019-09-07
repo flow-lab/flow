@@ -1,6 +1,9 @@
 deps:
 	@go mod download
 
+tidy:
+	@go mod tidy
+
 test: generate
 	@go test -covermode=atomic -installsuffix "static" ./...
 
