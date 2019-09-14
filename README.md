@@ -130,6 +130,36 @@ NOTE: Flow CLI is under development, and may occasionally make backwards-incompa
 * exports all API specifications in swagger or oas3 specification and saves to file(s)
     
     `flow apigateway export`
+  
+### kafka (MSK) - Amazon Managed Streaming for Apache Kafka
+
+* list MSK clusters in the account
+
+    `flow kafka list-clusters`
+
+* describe MSK cluster
+
+    `flow kafka describe-cluster --cluster-name "MSK-Dev"`
+
+* get bootstrap brokers
+
+    `flow kafka get-bootstrap-brokers --cluster-name "MSK-Dev"`
+
+* send message to topic
+
+     `flow kafka send --cluster-name "MSK-Dev" --topic "topic-name" --message "test"`
+
+* create topic
+
+     `flow kafka create-topic --cluster-name "MSK-Dev" --topic "topic-name" --num-partitions 1 --replication-factor 1 --retention-ms "-1"`
+
+* delete topic
+
+     `flow kafka delete-topic --cluster-name "MSK-Dev" --topic "topic-name"`
+     
+* describe topic
+
+     `flow kafka describe-topic --cluster-name "MSK-Dev" --topic "topic-name"`
 
 ### base64
     

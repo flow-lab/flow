@@ -20,7 +20,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/flow-lab/flow/pkg/base64"
 	flowdynamo "github.com/flow-lab/flow/pkg/dynamodb"
+	flowkafka "github.com/flow-lab/flow/pkg/kafka"
 	"github.com/flow-lab/flow/pkg/logs"
+	"github.com/flow-lab/flow/pkg/msk"
 	"github.com/flow-lab/flow/pkg/session"
 	vegeta "github.com/tsenart/vegeta/lib"
 	"io/ioutil"
@@ -40,23 +42,6 @@ var (
 	commit  = "none"
 	date    = "unknown"
 )
-
-// TODO [grokrz]: move to pkg
-func getClusterArn(s string, kc *kafka.Kafka) (*string, error) {
-	listClusterInput := kafka.ListClustersInput{}
-	listClusterOutput, err := kc.ListClusters(&listClusterInput)
-	if err != nil {
-		return nil, fmt.Errorf("unable to list clusters: %v", err)
-	}
-
-	for _, cluster := range listClusterOutput.ClusterInfoList {
-		if s == *cluster.ClusterName {
-			return cluster.ClusterArn, nil
-		}
-	}
-
-	return nil, fmt.Errorf("cluster arn for %s not found", s)
-}
 
 type RSAValue struct {
 	PrivateKey string `json:"private_key"`
@@ -2312,8 +2297,7 @@ func main() {
 						Usage: "",
 						Flags: []cli.Flag{
 							cli.StringFlag{
-								Name:  "profile",
-								Value: "",
+								Name: "profile",
 							},
 						},
 						Action: func(c *cli.Context) error {
@@ -2341,26 +2325,31 @@ func main() {
 						Flags: []cli.Flag{
 							cli.StringFlag{
 								Name:  "cluster-name",
-								Value: "",
+								Usage: "MSK cluster name, eg 'kafka-dev'",
 							},
 							cli.StringFlag{
-								Name:  "profile",
-								Value: "",
+								Name: "profile",
 							},
 						},
 						Action: func(c *cli.Context) error {
 							profile := c.String("profile")
 							clusterName := c.String("cluster-name")
+
+							if clusterName == "" {
+								return fmt.Errorf("cluster-name is required")
+							}
+
 							sess := session.NewSessionWithSharedProfile(profile)
 							kc := kafka.New(sess)
+							m := msk.New(kc)
 
-							clusterArn, err := getClusterArn(clusterName, kc)
+							arn, err := m.GetClusterArn(clusterName)
 							if err != nil {
 								return err
 							}
 
 							describeClusterInput := kafka.DescribeClusterInput{
-								ClusterArn: clusterArn,
+								ClusterArn: arn,
 							}
 
 							describeClusterOutput, err := kc.DescribeCluster(&describeClusterInput)
@@ -2379,7 +2368,119 @@ func main() {
 						Flags: []cli.Flag{
 							cli.StringFlag{
 								Name:  "cluster-name",
-								Value: "",
+								Usage: "MSK cluster name, eg 'kafka-dev'",
+							},
+							cli.StringFlag{
+								Name: "profile",
+							},
+						},
+						Action: func(c *cli.Context) error {
+							profile := c.String("profile")
+							clusterName := c.String("cluster-name")
+
+							if clusterName == "" {
+								return fmt.Errorf("cluster-name is required")
+							}
+
+							sess := session.NewSessionWithSharedProfile(profile)
+							kc := kafka.New(sess)
+							m := msk.New(kc)
+
+							bb, err := m.GetBootstrapBrokers(clusterName)
+							if err != nil {
+								return err
+							}
+							fmt.Print(*bb)
+							return nil
+						},
+					},
+					{
+						Name:        "send",
+						Description: "send message to topic",
+						Flags: []cli.Flag{
+							cli.StringFlag{
+								Name:  "cluster-name",
+								Usage: "MSK cluster name, eg 'kafka-dev'",
+							},
+							cli.StringFlag{
+								Name:  "bootstrap-broker",
+								Usage: "bootstrap broker, eg. localhost:9092",
+							},
+							cli.StringFlag{
+								Name:  "topic",
+								Usage: "topic name",
+							},
+							cli.StringFlag{
+								Name:  "message",
+								Usage: "message body",
+							},
+							cli.StringFlag{
+								Name: "profile",
+							},
+						},
+						Action: func(c *cli.Context) error {
+							clusterName := c.String("cluster-name")
+							bootstrapBrokers := c.String("bootstrap-broker")
+
+							if clusterName == "" && bootstrapBrokers == "" {
+								return fmt.Errorf("cluster-name or bootstrap-broker is required")
+							}
+							msg := c.String("message")
+							if msg == "" {
+								return fmt.Errorf("message is required")
+							}
+
+							topic := c.String("topic")
+							if topic == "" {
+								return fmt.Errorf("topic is required")
+							}
+							profile := c.String("profile")
+
+							sess := session.NewSessionWithSharedProfile(profile)
+							kc := kafka.New(sess)
+							m := msk.New(kc)
+
+							bb, err := m.GetBootstrapBrokers(clusterName)
+							if err != nil {
+								return fmt.Errorf("getBootstrapBroker failed: %s", err)
+							}
+
+							fk := flowkafka.NewFlowKafka(&flowkafka.ServiceConfig{
+								BootstrapBroker: *bb,
+							})
+							return fk.Produce(topic, []byte(msg))
+						},
+					},
+					{
+						Name:        "create-topic",
+						Description: "crates the topic",
+						Flags: []cli.Flag{
+							cli.StringFlag{
+								Name:  "cluster-name",
+								Usage: "MSK cluster name, eg 'kafka-dev'",
+							},
+							cli.StringFlag{
+								Name:  "bootstrap-broker",
+								Usage: "bootstrap broker, eg. localhost:9092",
+							},
+							cli.StringFlag{
+								Name:  "topic",
+								Usage: "topic name",
+							},
+							cli.IntFlag{
+								Name:  "num-partitions",
+								Value: 1,
+								Usage: "number of partitions",
+							},
+							cli.IntFlag{
+								Name:  "replication-factor",
+								Value: 1,
+								Usage: "replication factor",
+							},
+							cli.StringFlag{
+								Name:  "retention-ms",
+								Value: "-1",
+								Usage: "retention ms",
 							},
 							cli.StringFlag{
 								Name:  "profile",
@@ -2387,26 +2488,143 @@ func main() {
 							},
 						},
 						Action: func(c *cli.Context) error {
-							profile := c.String("profile")
 							clusterName := c.String("cluster-name")
+							bootstrapBrokers := c.String("bootstrap-broker")
+
+							if clusterName == "" && bootstrapBrokers == "" {
+								return fmt.Errorf("cluster-name or bootstrap-broker is required")
+							}
+
+							topic := c.String("topic")
+							if topic == "" {
+								return fmt.Errorf("topic is required")
+							}
+
+							numPartitions := c.Int("num-partitions")
+							replicationFactor := c.Int("replication-factor")
+							retentionMs := c.String("retention-ms")
+
+							profile := c.String("profile")
+
 							sess := session.NewSessionWithSharedProfile(profile)
 							kc := kafka.New(sess)
+							m := msk.New(kc)
 
-							clusterArn, err := getClusterArn(clusterName, kc)
+							bb, err := m.GetBootstrapBrokers(clusterName)
 							if err != nil {
-								return err
+								return fmt.Errorf("getBootstrapBroker failed: %s", err)
+							}
+							ks := flowkafka.NewFlowKafka(&flowkafka.ServiceConfig{
+								BootstrapBroker: *bb,
+							})
+							return ks.CreateTopic(topic, numPartitions, replicationFactor, retentionMs)
+						},
+					},
+					{
+						Name:        "delete-topic",
+						Description: "deletes the topic",
+						Flags: []cli.Flag{
+							cli.StringFlag{
+								Name:  "cluster-name",
+								Usage: "MSK cluster name, eg 'kafka-dev'",
+							},
+							cli.StringFlag{
+								Name:  "bootstrap-broker",
+								Usage: "bootstrap broker, eg. localhost:9092",
+							},
+							cli.StringFlag{
+								Name:  "topic",
+								Usage: "topic name",
+							},
+							cli.StringFlag{
+								Name: "profile",
+							},
+						},
+						Action: func(c *cli.Context) error {
+							clusterName := c.String("cluster-name")
+							bootstrapBrokers := c.String("bootstrap-broker")
+
+							if clusterName == "" && bootstrapBrokers == "" {
+								return fmt.Errorf("cluster-name or bootstrap-broker is required")
 							}
 
-							getBootstrapBrokersInput := kafka.GetBootstrapBrokersInput{
-								ClusterArn: clusterArn,
+							topic := c.String("topic")
+							if topic == "" {
+								return fmt.Errorf("topic is required")
 							}
 
-							getBootstrapBrokersInputOutput, err := kc.GetBootstrapBrokers(&getBootstrapBrokersInput)
+							profile := c.String("profile")
+
+							sess := session.NewSessionWithSharedProfile(profile)
+							kc := kafka.New(sess)
+							m := msk.New(kc)
+
+							bb, err := m.GetBootstrapBrokers(clusterName)
 							if err != nil {
-								return err
+								return fmt.Errorf("getBootstrapBroker failed: %s", err)
+							}
+							fk := flowkafka.NewFlowKafka(&flowkafka.ServiceConfig{
+								BootstrapBroker: *bb,
+							})
+							return fk.DeleteTopic(topic)
+						},
+					},
+					{
+						Name:        "describe-topic",
+						Description: "describe topic",
+						Flags: []cli.Flag{
+							cli.StringFlag{
+								Name:  "cluster-name",
+								Value: "",
+								Usage: "MSK cluster name, eg 'kafka-dev'",
+							},
+							cli.StringFlag{
+								Name:  "bootstrap-broker",
+								Usage: "bootstrap broker, eg. localhost:9092",
+							},
+							cli.StringSliceFlag{
+								Name:  "topic",
+								Usage: "topic(s) name",
+							},
+							cli.StringFlag{
+								Name: "profile",
+							},
+						},
+						Action: func(c *cli.Context) error {
+							clusterName := c.String("cluster-name")
+							bootstrapBrokers := c.String("bootstrap-broker")
+
+							if clusterName == "" && bootstrapBrokers == "" {
+								return fmt.Errorf("cluster-name or bootstrap-broker is required")
 							}
 
-							fmt.Printf("%v", getBootstrapBrokersInputOutput)
+							topic := c.StringSlice("topic")
+							if len(topic) == 0 {
+								return fmt.Errorf("topic is required")
+							}
+
+							profile := c.String("profile")
+
+							sess := session.NewSessionWithSharedProfile(profile)
+							kc := kafka.New(sess)
+							m := msk.New(kc)
+
+							bb, err := m.GetBootstrapBrokers(clusterName)
+							if err != nil {
+								return fmt.Errorf("getBootstrapBroker failed: %s", err)
+							}
+							fk := flowkafka.NewFlowKafka(&flowkafka.ServiceConfig{
+								BootstrapBroker: *bb,
+							})
+							resp, err := fk.DescribeTopic(topic...)
+							if err != nil {
+								return fmt.Errorf("unable to descrie topic: %s", err)
+							}
+							bytes, err := json.Marshal(resp)
+							if err != nil {
+								return fmt.Errorf("unable to serialize response")
+							}
+							fmt.Printf("%v", string(bytes))
 
 							return nil
 						},
