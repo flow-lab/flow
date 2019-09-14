@@ -19,7 +19,7 @@ func (kc *kafkaMock) ListClusters(*kafka.ListClustersInput) (*kafka.ListClusters
 	return &kafka.ListClustersOutput{
 		ClusterInfoList: []*kafka.ClusterInfo{
 			{
-				ClusterArn:  aws.String("test"),
+				ClusterArn:  aws.String("test-arn"),
 				ClusterName: aws.String("test-cluster"),
 			},
 		},
@@ -33,7 +33,7 @@ func (kc *kafkaMock) GetBootstrapBrokers(*kafka.GetBootstrapBrokersInput) (*kafk
 	}, nil
 }
 
-func TestNew(t *testing.T) {
+func TestMskKafka_GetBootstrapBrokers(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -43,4 +43,16 @@ func TestNew(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.Equal(t, "localhost:9092,localhost:9093", *bootstrapBrokers)
+}
+
+func TestMskKafka_GetClusterArn(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	c := New(&kafkaMock{})
+
+	arn, err := c.GetClusterArn("test-cluster")
+
+	assert.Nil(t, err)
+	assert.Equal(t, "test-arn", *arn)
 }
