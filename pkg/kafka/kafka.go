@@ -4,67 +4,26 @@ import (
 	"fmt"
 	"github.com/Shopify/sarama"
 	"github.com/flow-lab/flow/pkg"
-	"time"
 )
 
 type config struct {
 	saramaConfig    *sarama.Config
 	bootstrapBroker string
 	producer        sarama.SyncProducer
-	broker          Broker
 }
 
-// FlowKafka is an interface representing operations that can be make with Kafka Cluster
+// FlowKafka is an interface representing operations that can be executed with Kafka Cluster
 type FlowKafka interface {
 	CreateTopic(topic string, numPartitions int, replicationFactor int, retentionMs string) error
 	DeleteTopic(topic string) error
-	DescribeTopic(topic ...string) ([]*pkg.Topic, error)
-	GetMetadata() (*pkg.Metadata, error)
+	DescribeTopic(topic string) (*pkg.Topic, error)
 	Produce(topic string, msg []byte) error
 }
 
 type ServiceConfig struct {
 	BootstrapBroker string
 	producer        sarama.SyncProducer
-	broker          Broker
-}
-
-// Broker needs to be wrapped so it can be tested
-type Broker interface {
-	CreateTopics(request *sarama.CreateTopicsRequest) (*sarama.CreateTopicsResponse, error)
-	DeleteTopics(request *sarama.DeleteTopicsRequest) (*sarama.DeleteTopicsResponse, error)
-	DescribeConfigs(request *sarama.DescribeConfigsRequest) (*sarama.DescribeConfigsResponse, error)
-	GetMetadata(request *sarama.MetadataRequest) (*sarama.MetadataResponse, error)
-	Open(conf *sarama.Config) error
-	Close() error
-}
-
-type saramaBrokerWrapper struct {
-	broker sarama.Broker
-}
-
-func (sb *saramaBrokerWrapper) CreateTopics(request *sarama.CreateTopicsRequest) (*sarama.CreateTopicsResponse, error) {
-	return sb.broker.CreateTopics(request)
-}
-
-func (sb *saramaBrokerWrapper) DeleteTopics(request *sarama.DeleteTopicsRequest) (*sarama.DeleteTopicsResponse, error) {
-	return sb.broker.DeleteTopics(request)
-}
-
-func (sb *saramaBrokerWrapper) Open(conf *sarama.Config) error {
-	return sb.broker.Open(conf)
-}
-
-func (sb *saramaBrokerWrapper) Close() error {
-	return sb.broker.Close()
-}
-
-func (sb *saramaBrokerWrapper) DescribeConfigs(request *sarama.DescribeConfigsRequest) (*sarama.DescribeConfigsResponse, error) {
-	return sb.broker.DescribeConfigs(request)
-}
-
-func (sb *saramaBrokerWrapper) GetMetadata(request *sarama.MetadataRequest) (*sarama.MetadataResponse, error) {
-	return sb.broker.GetMetadata(request)
+	clusterAdmin    sarama.ClusterAdmin
 }
 
 // NewFlowKafka create new instance of service
@@ -73,30 +32,41 @@ func NewFlowKafka(c *ServiceConfig) FlowKafka {
 		panic("bootstrapBrokers is required")
 	}
 
+	kv := sarama.V2_3_0_0
+
 	sConfig := sarama.NewConfig()
-	sConfig.Version = sarama.V2_1_0_0
+	sConfig.Version = kv
 	sConfig.Producer.RequiredAcks = sarama.WaitForAll
 	sConfig.Producer.Return.Successes = true
 
 	ser := &saramaService{
-		config{
+		config: config{
 			saramaConfig:    sConfig,
 			producer:        c.producer,
 			bootstrapBroker: c.BootstrapBroker,
 		},
 	}
 
-	if c.broker == nil {
-		c.broker = &saramaBrokerWrapper{
-			broker: *sarama.NewBroker(c.BootstrapBroker),
+	if c.clusterAdmin == nil {
+		config := sarama.NewConfig()
+		config.Version = kv
+		var addr []string
+		addr = append(addr, c.BootstrapBroker)
+		admin, err := sarama.NewClusterAdmin(addr, config)
+		if err != nil {
+			panic(err)
 		}
+		ser.ClusterAdmin = admin
+	} else {
+		ser.ClusterAdmin = c.clusterAdmin
 	}
-	ser.broker = c.broker
+
 	return ser
 }
 
 type saramaService struct {
 	config
+	sarama.ClusterAdmin
 }
 
 func (ss *saramaService) Produce(topic string, msg []byte) error {
@@ -123,167 +93,41 @@ func (ss *saramaService) Produce(topic string, msg []byte) error {
 }
 
 func (ss *saramaService) CreateTopic(topic string, numPartitions int, replicationFactor int, retentionMs string) error {
-	err := ss.broker.Open(ss.config.saramaConfig)
-	if err != nil {
-		return fmt.Errorf("unable to connect to broker: %v", err)
+	td := &sarama.TopicDetail{
+		ConfigEntries:     map[string]*string{"retention.ms": &retentionMs},
+		NumPartitions:     int32(numPartitions),
+		ReplicationFactor: int16(replicationFactor),
 	}
-	defer func() {
-		err := ss.broker.Close()
-		if err != nil {
-			panic(err)
-		}
-	}()
-
-	topicDetail := &sarama.TopicDetail{
-		ConfigEntries: map[string]*string{
-			"retention.ms": &retentionMs,
-		},
-	}
-	topicDetail.NumPartitions = int32(numPartitions)
-	topicDetail.ReplicationFactor = int16(replicationFactor)
-	topicDetails := make(map[string]*sarama.TopicDetail)
-	topicDetails[topic] = topicDetail
-	request := sarama.CreateTopicsRequest{
-		Timeout:      time.Second * 15,
-		TopicDetails: topicDetails,
-	}
-
-	response, err := ss.broker.CreateTopics(&request)
-	if err != nil {
-		fmt.Printf("unable to create topic: %v", err)
-		return err
-	}
-
-	topicError := response.TopicErrors[topic]
-	if topicError != nil && topicError.Err != sarama.ErrNoError {
-		return fmt.Errorf("createTopic failed with %s", response.TopicErrors[topic])
-	} else {
-		fmt.Printf("topic %s created", topic)
-	}
-
-	return nil
+	return ss.ClusterAdmin.CreateTopic(topic, td, false)
 }
 
 func (ss *saramaService) DeleteTopic(topic string) error {
-	err := ss.broker.Open(ss.config.saramaConfig)
-	if err != nil {
-		return fmt.Errorf("unable to connect to broker: %v", err)
-	}
-	defer func() {
-		err := ss.broker.Close()
-		if err != nil {
-			panic(err)
-		}
-	}()
-
-	dr := &sarama.DeleteTopicsRequest{
-		Topics: []string{
-			topic,
-		},
-		Timeout: time.Second * 15,
-	}
-
-	response, err := ss.broker.DeleteTopics(dr)
-	if err != nil {
-		fmt.Printf("unable to delete topic: %v", err)
-		return err
-	}
-
-	kError := response.TopicErrorCodes[topic]
-	if kError != sarama.ErrNoError {
-		return fmt.Errorf("deleteTopic failed: %s", kError)
-	} else {
-		fmt.Printf("topic %s deleted", topic)
-	}
-	return nil
+	return ss.ClusterAdmin.DeleteTopic(topic)
 }
 
-func (ss *saramaService) DescribeTopic(topics ...string) ([]*pkg.Topic, error) {
-	err := ss.broker.Open(ss.config.saramaConfig)
+func (ss *saramaService) DescribeTopic(topic string) (*pkg.Topic, error) {
+	entries, err := ss.ClusterAdmin.DescribeConfig(sarama.ConfigResource{
+		Type: sarama.TopicResource,
+		Name: topic,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("unable to connect to broker: %v", err)
+		return nil, err
 	}
-	defer func() {
-		err := ss.broker.Close()
-		if err != nil {
-			panic(err)
-		}
-	}()
 
-	var configs []*sarama.ConfigResource
-	for _, t := range topics {
-		configs = append(configs, &sarama.ConfigResource{
-			Name: t,
-			Type: sarama.TopicResource,
+	var c []*pkg.ConfigEntry
+	for _, e := range entries {
+		c = append(c, &pkg.ConfigEntry{
+			Name:      e.Name,
+			Value:     e.Value,
+			ReadOnly:  e.ReadOnly,
+			Default:   e.Default,
+			Sensitive: e.Sensitive,
 		})
 	}
 
-	request := &sarama.DescribeConfigsRequest{
-		Version:   0,
-		Resources: configs,
+	t := pkg.Topic{
+		Name:    topic,
+		Configs: c,
 	}
-
-	response, err := ss.broker.DescribeConfigs(request)
-	if err != nil {
-		return nil, fmt.Errorf("unable to get config. Err: %s", err)
-	}
-
-	var resTopics []*pkg.Topic
-	for _, r := range response.Resources {
-		if r.ErrorCode != 0 {
-			resTopics = append(resTopics, &pkg.Topic{
-				Name: r.Name,
-				ErrorMsg: func() *string {
-					p := sarama.KError(r.ErrorCode).Error()
-					return &p
-				}(),
-			})
-
-			continue
-		}
-
-		var configEntries []*pkg.ConfigEntry
-		for _, ce := range r.Configs {
-			configEntries = append(configEntries, &pkg.ConfigEntry{
-				Name:  ce.Name,
-				Value: ce.Value,
-			})
-		}
-
-		resTopics = append(resTopics, &pkg.Topic{
-			Name:    r.Name,
-			Configs: configEntries,
-		})
-	}
-
-	return resTopics, nil
-}
-
-func (ss *saramaService) GetMetadata() (*pkg.Metadata, error) {
-	err := ss.broker.Open(ss.config.saramaConfig)
-	if err != nil {
-		return nil, fmt.Errorf("unable to connect to broker: %v", err)
-	}
-	defer func() {
-		err := ss.broker.Close()
-		if err != nil {
-			panic(err)
-		}
-	}()
-
-	response, err := ss.broker.GetMetadata(&sarama.MetadataRequest{})
-	if err != nil {
-		return nil, fmt.Errorf("unable to get config. Err: %s", err)
-	}
-
-	var resTopics []*pkg.Topic
-	for _, r := range response.Topics {
-		resTopics = append(resTopics, &pkg.Topic{
-			Name: r.Name,
-		})
-	}
-
-	return &pkg.Metadata{
-		Topics: resTopics,
-	}, nil
+	return &t, nil
 }

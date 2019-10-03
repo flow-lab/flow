@@ -18,6 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/flow-lab/flow/pkg"
 	"github.com/flow-lab/flow/pkg/base64"
 	flowdynamo "github.com/flow-lab/flow/pkg/dynamodb"
 	flowkafka "github.com/flow-lab/flow/pkg/kafka"
@@ -2616,11 +2617,16 @@ func main() {
 							fk := flowkafka.NewFlowKafka(&flowkafka.ServiceConfig{
 								BootstrapBroker: *bb,
 							})
-							resp, err := fk.DescribeTopic(topic...)
-							if err != nil {
-								return fmt.Errorf("unable to descrie topic: %s", err)
+
+							var tr []*pkg.Topic
+							for _, t := range topic {
+								r, err := fk.DescribeTopic(t)
+								if err != nil {
+									return fmt.Errorf("unable to describe topic: %s", err)
+								}
+								tr = append(tr, r)
 							}
-							bytes, err := json.Marshal(resp)
+							bytes, err := json.Marshal(tr)
 							if err != nil {
 								return fmt.Errorf("unable to serialize response")
 							}

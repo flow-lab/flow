@@ -2,8 +2,11 @@ package pkg
 
 // ConfigEntry represents topic configuration
 type ConfigEntry struct {
-	Name  string
-	Value string
+	Name      string
+	Value     string
+	ReadOnly  bool
+	Default   bool
+	Sensitive bool
 }
 
 // Topic represents kafka topic

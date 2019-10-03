@@ -159,7 +159,7 @@ NOTE: Flow CLI is under development, and may occasionally make backwards-incompa
      
 * describe topic
 
-     `flow kafka describe-topic --cluster-name "MSK-Dev" --topic "topic-name"`
+     `flow kafka describe-topic --cluster-name "MSK-Dev" --topic "topic-name-0" --topic "topic-name-1"`
 
 ### base64
     

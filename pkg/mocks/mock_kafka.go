@@ -5,7 +5,6 @@
 package mocks
 
 import (
-	sarama "github.com/Shopify/sarama"
 	pkg "github.com/flow-lab/flow/pkg"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
@@ -63,37 +62,18 @@ func (mr *MockFlowKafkaMockRecorder) DeleteTopic(topic interface{}) *gomock.Call
 }
 
 // DescribeTopic mocks base method
-func (m *MockFlowKafka) DescribeTopic(topic ...string) ([]*pkg.Topic, error) {
+func (m *MockFlowKafka) DescribeTopic(topic string) (*pkg.Topic, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{}
-	for _, a := range topic {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "DescribeTopic", varargs...)
-	ret0, _ := ret[0].([]*pkg.Topic)
+	ret := m.ctrl.Call(m, "DescribeTopic", topic)
+	ret0, _ := ret[0].(*pkg.Topic)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // DescribeTopic indicates an expected call of DescribeTopic
-func (mr *MockFlowKafkaMockRecorder) DescribeTopic(topic ...interface{}) *gomock.Call {
+func (mr *MockFlowKafkaMockRecorder) DescribeTopic(topic interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeTopic", reflect.TypeOf((*MockFlowKafka)(nil).DescribeTopic), topic...)
-}
-
-// GetMetadata mocks base method
-func (m *MockFlowKafka) GetMetadata() (*pkg.Metadata, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetMetadata")
-	ret0, _ := ret[0].(*pkg.Metadata)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetMetadata indicates an expected call of GetMetadata
-func (mr *MockFlowKafkaMockRecorder) GetMetadata() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMetadata", reflect.TypeOf((*MockFlowKafka)(nil).GetMetadata))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeTopic", reflect.TypeOf((*MockFlowKafka)(nil).DescribeTopic), topic)
 }
 
 // Produce mocks base method
@@ -108,115 +88,4 @@ func (m *MockFlowKafka) Produce(topic string, msg []byte) error {
 func (mr *MockFlowKafkaMockRecorder) Produce(topic, msg interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Produce", reflect.TypeOf((*MockFlowKafka)(nil).Produce), topic, msg)
-}
-
-// MockBroker is a mock of Broker interface
-type MockBroker struct {
-	ctrl     *gomock.Controller
-	recorder *MockBrokerMockRecorder
-}
-
-// MockBrokerMockRecorder is the mock recorder for MockBroker
-type MockBrokerMockRecorder struct {
-	mock *MockBroker
-}
-
-// NewMockBroker creates a new mock instance
-func NewMockBroker(ctrl *gomock.Controller) *MockBroker {
-	mock := &MockBroker{ctrl: ctrl}
-	mock.recorder = &MockBrokerMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockBroker) EXPECT() *MockBrokerMockRecorder {
-	return m.recorder
-}
-
-// CreateTopics mocks base method
-func (m *MockBroker) CreateTopics(request *sarama.CreateTopicsRequest) (*sarama.CreateTopicsResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateTopics", request)
-	ret0, _ := ret[0].(*sarama.CreateTopicsResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CreateTopics indicates an expected call of CreateTopics
-func (mr *MockBrokerMockRecorder) CreateTopics(request interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateTopics", reflect.TypeOf((*MockBroker)(nil).CreateTopics), request)
-}
-
-// DeleteTopics mocks base method
-func (m *MockBroker) DeleteTopics(request *sarama.DeleteTopicsRequest) (*sarama.DeleteTopicsResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteTopics", request)
-	ret0, _ := ret[0].(*sarama.DeleteTopicsResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// DeleteTopics indicates an expected call of DeleteTopics
-func (mr *MockBrokerMockRecorder) DeleteTopics(request interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTopics", reflect.TypeOf((*MockBroker)(nil).DeleteTopics), request)
-}
-
-// DescribeConfigs mocks base method
-func (m *MockBroker) DescribeConfigs(request *sarama.DescribeConfigsRequest) (*sarama.DescribeConfigsResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DescribeConfigs", request)
-	ret0, _ := ret[0].(*sarama.DescribeConfigsResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// DescribeConfigs indicates an expected call of DescribeConfigs
-func (mr *MockBrokerMockRecorder) DescribeConfigs(request interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeConfigs", reflect.TypeOf((*MockBroker)(nil).DescribeConfigs), request)
-}
-
-// GetMetadata mocks base method
-func (m *MockBroker) GetMetadata(request *sarama.MetadataRequest) (*sarama.MetadataResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetMetadata", request)
-	ret0, _ := ret[0].(*sarama.MetadataResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetMetadata indicates an expected call of GetMetadata
-func (mr *MockBrokerMockRecorder) GetMetadata(request interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMetadata", reflect.TypeOf((*MockBroker)(nil).GetMetadata), request)
-}
-
-// Open mocks base method
-func (m *MockBroker) Open(conf *sarama.Config) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Open", conf)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Open indicates an expected call of Open
-func (mr *MockBrokerMockRecorder) Open(conf interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Open", reflect.TypeOf((*MockBroker)(nil).Open), conf)
-}
-
-// Close mocks base method
-func (m *MockBroker) Close() error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Close")
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Close indicates an expected call of Close
-func (mr *MockBrokerMockRecorder) Close() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockBroker)(nil).Close))
 }
