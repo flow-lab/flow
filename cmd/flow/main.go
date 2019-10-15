@@ -18,13 +18,12 @@ import (
 	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/flow-lab/flow/pkg"
-	"github.com/flow-lab/flow/pkg/base64"
-	flowdynamo "github.com/flow-lab/flow/pkg/dynamodb"
-	flowkafka "github.com/flow-lab/flow/pkg/kafka"
-	"github.com/flow-lab/flow/pkg/logs"
-	"github.com/flow-lab/flow/pkg/msk"
-	"github.com/flow-lab/flow/pkg/session"
+	"github.com/flow-lab/flow/internal/base64"
+	flowdynamo "github.com/flow-lab/flow/internal/dynamodb"
+	flowkafka "github.com/flow-lab/flow/internal/kafka"
+	"github.com/flow-lab/flow/internal/logs"
+	"github.com/flow-lab/flow/internal/msk"
+	"github.com/flow-lab/flow/internal/session"
 	vegeta "github.com/tsenart/vegeta/lib"
 	"io/ioutil"
 	"log"
@@ -2618,7 +2617,7 @@ func main() {
 								BootstrapBroker: *bb,
 							})
 
-							var tr []*pkg.Topic
+							var tr []*flowkafka.Topic
 							for _, t := range topic {
 								r, err := fk.DescribeTopic(t)
 								if err != nil {

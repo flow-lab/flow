@@ -3,19 +3,18 @@ package kafka
 import (
 	"github.com/Shopify/sarama"
 	smocks "github.com/Shopify/sarama/mocks"
-	"github.com/flow-lab/flow/pkg/mocks"
+	mocks2 "github.com/flow-lab/flow/internal/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
-//go:generate mockgen -source=kafka.go -destination=../mocks/mock_kafka.go -package=mocks
 //go:generate mockgen -package=mocks -destination ../mocks/mock_cluster_admin.go github.com/Shopify/sarama ClusterAdmin
 
 func TestNewMimiroKafka(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	ca := mocks.NewMockClusterAdmin(ctrl)
+	ca := mocks2.NewMockClusterAdmin(ctrl)
 
 	s := NewFlowKafka(&ServiceConfig{
 		BootstrapBroker: "localhost:9092",
@@ -27,7 +26,7 @@ func TestNewMimiroKafka(t *testing.T) {
 func TestSaramaService_Produce(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	ca := mocks.NewMockClusterAdmin(ctrl)
+	ca := mocks2.NewMockClusterAdmin(ctrl)
 	syncProdMock := smocks.NewSyncProducer(t, nil)
 	syncProdMock.ExpectSendMessageAndSucceed()
 	s := NewFlowKafka(&ServiceConfig{
@@ -45,7 +44,7 @@ func TestSaramaService_Produce(t *testing.T) {
 func TestSaramaService_CreateTopic(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	ca := mocks.NewMockClusterAdmin(ctrl)
+	ca := mocks2.NewMockClusterAdmin(ctrl)
 	topic := "test-topic"
 	_ = &sarama.CreateTopicsResponse{
 		TopicErrors: map[string]*sarama.TopicError{
@@ -71,7 +70,7 @@ func TestSaramaService_CreateTopic(t *testing.T) {
 func TestSaramaService_DeleteTopic(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	ca := mocks.NewMockClusterAdmin(ctrl)
+	ca := mocks2.NewMockClusterAdmin(ctrl)
 	topic := "test-topic"
 	ca.EXPECT().
 		DeleteTopic(gomock.Eq(topic)).
@@ -90,7 +89,7 @@ func TestSaramaService_DeleteTopic(t *testing.T) {
 func TestSaramaService_DescribeTopic(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	ca := mocks.NewMockClusterAdmin(ctrl)
+	ca := mocks2.NewMockClusterAdmin(ctrl)
 	topic := "test-topic"
 	entries := []sarama.ConfigEntry{{Name: "test"}}
 	ca.EXPECT().

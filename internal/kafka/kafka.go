@@ -3,8 +3,28 @@ package kafka
 import (
 	"fmt"
 	"github.com/Shopify/sarama"
-	"github.com/flow-lab/flow/pkg"
 )
+
+// ConfigEntry represents topic configuration.
+type ConfigEntry struct {
+	Name      string
+	Value     string
+	ReadOnly  bool
+	Default   bool
+	Sensitive bool
+}
+
+// Topic represents kafka topic.
+type Topic struct {
+	Name     string         `json:"name,omitempty"`
+	Configs  []*ConfigEntry `json:"configs,omitempty"`
+	ErrorMsg *string        `json:"errorMsg,omitempty"`
+}
+
+// Metadata represents topics details.
+type Metadata struct {
+	Topics []*Topic
+}
 
 type config struct {
 	saramaConfig    *sarama.Config
@@ -12,11 +32,11 @@ type config struct {
 	producer        sarama.SyncProducer
 }
 
-// FlowKafka is an interface representing operations that can be executed with Kafka Cluster
+// FlowKafka is an interface representing operations that can be executed with Kafka Cluster.
 type FlowKafka interface {
 	CreateTopic(topic string, numPartitions int, replicationFactor int, retentionMs string) error
 	DeleteTopic(topic string) error
-	DescribeTopic(topic string) (*pkg.Topic, error)
+	DescribeTopic(topic string) (*Topic, error)
 	Produce(topic string, msg []byte) error
 }
 
@@ -105,7 +125,7 @@ func (ss *saramaService) DeleteTopic(topic string) error {
 	return ss.ClusterAdmin.DeleteTopic(topic)
 }
 
-func (ss *saramaService) DescribeTopic(topic string) (*pkg.Topic, error) {
+func (ss *saramaService) DescribeTopic(topic string) (*Topic, error) {
 	entries, err := ss.ClusterAdmin.DescribeConfig(sarama.ConfigResource{
 		Type: sarama.TopicResource,
 		Name: topic,
@@ -114,9 +134,9 @@ func (ss *saramaService) DescribeTopic(topic string) (*pkg.Topic, error) {
 		return nil, err
 	}
 
-	var c []*pkg.ConfigEntry
+	var c []*ConfigEntry
 	for _, e := range entries {
-		c = append(c, &pkg.ConfigEntry{
+		c = append(c, &ConfigEntry{
 			Name:      e.Name,
 			Value:     e.Value,
 			ReadOnly:  e.ReadOnly,
@@ -125,7 +145,7 @@ func (ss *saramaService) DescribeTopic(topic string) (*pkg.Topic, error) {
 		})
 	}
 
-	t := pkg.Topic{
+	t := Topic{
 		Name:    topic,
 		Configs: c,
 	}
