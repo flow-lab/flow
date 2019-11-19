@@ -17,7 +17,7 @@ func (f SQSMock) ListQueues(*sqs.ListQueuesInput) (*sqs.ListQueuesOutput, error)
 	return &sqs.ListQueuesOutput{QueueUrls: []*string{aws.String("	https://sqs.eu-west-1.amazonaws.com/111111111111/test-queue-name")}}, nil
 }
 
-func (f SQSMock) DeleteMessage(*sqs.DeleteMessageInput) (*sqs.DeleteMessageOutput, error) {
+func (f SQSMock) DeleteMessageBatch(*sqs.DeleteMessageBatchInput) (*sqs.DeleteMessageBatchOutput, error) {
 	return nil, nil
 }
 

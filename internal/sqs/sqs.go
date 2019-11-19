@@ -30,18 +30,19 @@ func (f flowSQSClient) Delete(ctx context.Context, queueName string, receiptHand
 		return err
 	}
 
+	var entries []*sqs.DeleteMessageBatchRequestEntry
 	for _, rh := range receiptHandles {
-		dmi := sqs.DeleteMessageInput{
-			QueueUrl:      aws.String(qUrl),
+		entries = append(entries, &sqs.DeleteMessageBatchRequestEntry{
 			ReceiptHandle: aws.String(rh),
-		}
-		_, err = f.DeleteMessage(&dmi)
-		if err != nil {
-			return err
-		}
+		})
 	}
 
-	return nil
+	dmi := sqs.DeleteMessageBatchInput{
+		QueueUrl: aws.String(qUrl),
+		Entries:  entries,
+	}
+	_, err = f.DeleteMessageBatch(&dmi)
+	return err
 }
 
 func (f flowSQSClient) resolveSQSURL(ctx context.Context, queueName string) (error, string) {
