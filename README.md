@@ -121,6 +121,10 @@ NOTE: Flow CLI is under development, and may occasionally make backwards-incompa
 
     `flow sqs purge --queue-name apud`
     
+* delete message
+
+    `flow sqs delete-message --queue-name test --receipt-handle "31451c88-bd89-4d75-b3dc-252d2ab583d1" --receipt-handle "AQEB5Ox73VW9r+893F2ET+Nuw20ASW2tDol3eQgiptmDUDb2Ombya1amTXco5vuhoSmxnCxY6cpeUJMrzjW2IjBoPTLI/5Fp4QP8GTnYpcqTSWIMYc9eZ/UELmJ5IIfiDjr3eCeJmdU96CiYQ8PaeA+r3x5zJkVmmOGsw1v/OUK+iVJiyrPWBRQaBjuawh34iS4h51NO8Nweu4Ctnf7q18c7dfRWzdljWPAHB7OKAzYYBSU6Q9pxaTFK7sgoC0DJIGswMDYA3yVW7zsDhOWHm4bRWnW8pGbltDSnhpihL2OisaNQn+EL0R0iYFKXF14PRpEaeG8MlkBndz76nf8tlDYvBbtFL9xubmQFJYGrZ5OHorEs4mnuZbmgftTOuejnlLBt"`
+    
 * describe sqs queue
 
     `flow sqs describe --queue-name apud`
