@@ -24,6 +24,7 @@ import (
 	"github.com/flow-lab/flow/internal/logs"
 	"github.com/flow-lab/flow/internal/msk"
 	"github.com/flow-lab/flow/internal/session"
+	flowsqs "github.com/flow-lab/flow/internal/sqs"
 	vegeta "github.com/tsenart/vegeta/lib"
 	"io/ioutil"
 	"log"
@@ -1161,6 +1162,44 @@ func main() {
 							}
 
 							return nil
+						},
+					},
+					{
+						Name:  "delete-message",
+						Usage: "delete-message",
+						Flags: []cli.Flag{
+							cli.StringFlag{
+								Name:  "queue-name",
+								Value: "",
+							},
+							cli.StringSliceFlag{
+								Name: "receipt-handle",
+							},
+							cli.StringFlag{
+								Name:  "profile",
+								Value: "",
+							},
+						},
+						Action: func(c *cli.Context) error {
+							profile := c.String("profile")
+							queueName := c.String("queue-name")
+							receiptHandles := c.StringSlice("receipt-handle")
+							sess := session.NewSessionWithSharedProfile(profile)
+
+							if queueName == "" {
+								return fmt.Errorf("queue-name is required")
+							}
+							if len(receiptHandles) < 1 {
+								return fmt.Errorf("receipt-handle is required")
+							}
+
+							sqsc := sqs.New(sess)
+							client, err := flowsqs.NewSQSClient(sqsc)
+							if err != nil {
+								return err
+							}
+
+							return client.Delete(context.Background(), queueName, receiptHandles)
 						},
 					},
 				},
