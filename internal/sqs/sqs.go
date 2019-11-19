@@ -3,6 +3,7 @@ package sqs
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
@@ -31,8 +32,9 @@ func (f flowSQSClient) Delete(ctx context.Context, queueName string, receiptHand
 	}
 
 	var entries []*sqs.DeleteMessageBatchRequestEntry
-	for _, rh := range receiptHandles {
+	for i, rh := range receiptHandles {
 		entries = append(entries, &sqs.DeleteMessageBatchRequestEntry{
+			Id:            aws.String(fmt.Sprintf("%d", i)),
 			ReceiptHandle: aws.String(rh),
 		})
 	}
@@ -41,6 +43,7 @@ func (f flowSQSClient) Delete(ctx context.Context, queueName string, receiptHand
 		QueueUrl: aws.String(qUrl),
 		Entries:  entries,
 	}
+
 	_, err = f.DeleteMessageBatch(&dmi)
 	return err
 }
