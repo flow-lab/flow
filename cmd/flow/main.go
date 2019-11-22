@@ -71,8 +71,13 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "Flow"
 	app.Version = version
-	app.Author = "krzysztof@flowlab.no"
-	app.Usage = "AWS CLI"
+	app.Authors = []cli.Author{
+		{
+			Name:  "Krzysztof Grodzicki",
+			Email: "krzysztof@flowlab.no",
+		},
+	}
+	app.Usage = "Development CLI"
 	app.Description = fmt.Sprintf("flow cli. Commit %v, build at %v", commit, date)
 	app.EnableBashCompletion = true
 
