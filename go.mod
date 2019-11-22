@@ -1,7 +1,6 @@
 module github.com/flow-lab/flow
 
 require (
-	github.com/DataDog/zstd v1.4.1 // indirect
 	github.com/Shopify/sarama v1.24.1
 	github.com/aws/aws-sdk-go v1.25.40
 	github.com/bmizerany/perks v0.0.0-20141205001514-d9a9656a3a4b // indirect
@@ -15,12 +14,11 @@ require (
 	github.com/klauspost/compress v1.9.2 // indirect
 	github.com/mailru/easyjson v0.7.0 // indirect
 	github.com/pierrec/lz4 v2.3.0+incompatible // indirect
-	github.com/pkg/profile v1.2.1 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20190826022208-cac0b30c2563 // indirect
 	github.com/streadway/quantile v0.0.0-20150917103942-b0c588724d25 // indirect
 	github.com/stretchr/testify v1.4.0
 	github.com/tsenart/vegeta v12.7.0+incompatible
-	github.com/urfave/cli v1.22.2
+	github.com/urfave/cli/v2 v2.0.0
 	golang.org/x/crypto v0.0.0-20191119213627-4f8c1d86b1ba // indirect
 	golang.org/x/exp v0.0.0-20191002040644-a1355ae1e2c3 // indirect
 	golang.org/x/net v0.0.0-20191119073136-fc4aabc6c914 // indirect
@@ -32,4 +30,4 @@ require (
 	gopkg.in/yaml.v2 v2.2.4 // indirect
 )
 
-go 1.13
+go 1.12

@@ -35,7 +35,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -71,35 +71,34 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "Flow"
 	app.Version = version
-	app.Authors = []cli.Author{
-		{
-			Name:  "Krzysztof Grodzicki",
-			Email: "krzysztof@flowlab.no",
-		},
+	a := cli.Author{
+		Name:  "Krzysztof Grodzicki",
+		Email: "krzysztof@flowlab.no",
 	}
+	app.Authors = []*cli.Author{&a}
 	app.Usage = "Development CLI"
 	app.Description = fmt.Sprintf("flow cli. Commit %v, build at %v", commit, date)
 	app.EnableBashCompletion = true
 
-	app.Commands = []cli.Command{
-		func() cli.Command {
-			return cli.Command{
+	app.Commands = []*cli.Command{
+		func() *cli.Command {
+			return &cli.Command{
 				Name: "dynamodb",
-				Subcommands: []cli.Command{
+				Subcommands: []*cli.Command{
 					{
 						Name:  "delete",
 						Usage: "delete item(s) from dynamodb using scan operation",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name: "filter-expression",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name: "table-name",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name: "expression-attribute-values",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name: "profile",
 							},
 						},
@@ -137,22 +136,22 @@ func main() {
 						Name:  "capacity",
 						Usage: "update read and write capacity",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name: "table-name",
 							},
-							cli.Int64Flag{
+							&cli.Int64Flag{
 								Name:  "read",
 								Value: int64(10),
 							},
-							cli.Int64Flag{
+							&cli.Int64Flag{
 								Name:  "write",
 								Value: int64(10),
 							},
-							cli.StringSliceFlag{
+							&cli.StringSliceFlag{
 								Name: "global-secondary-index",
 							},
 						},
@@ -209,11 +208,11 @@ func main() {
 						Name:  "describe-table",
 						Usage: "get table details",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "table-name",
 								Value: "",
 							},
@@ -241,11 +240,11 @@ func main() {
 						Name:  "count-item",
 						Usage: "counts elements in table using scan operation",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "table-name",
 								Value: "",
 							},
@@ -283,15 +282,15 @@ func main() {
 						Name:  "put-item",
 						Usage: "put item(s)",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "input",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "table-name",
 								Value: "",
 							},
@@ -375,15 +374,15 @@ func main() {
 						Name:  "delete-item",
 						Usage: "delete item(s)",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "table-name",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "input",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
@@ -465,27 +464,27 @@ func main() {
 						Name:  "map-to-primary-key",
 						Usage: "gets GSI keys and maps to Primary Keys using Query",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "table-name",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "secondary-index",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "projection-expression",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "keys",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "file-name",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
@@ -588,8 +587,8 @@ func main() {
 											if shouldWriteToFile {
 												results = append(results, item)
 											} else {
-												if json, err := json.Marshal(item); err == nil {
-													if _, err := writer.Write(json); err != nil {
+												if j, err := json.Marshal(item); err == nil {
+													if _, err := writer.Write(j); err != nil {
 														fmt.Printf("%v", item)
 														panic(err)
 													}
@@ -617,7 +616,7 @@ func main() {
 							if shouldWriteToFile {
 								var jso []byte
 								var werr error
-								if jso, werr = json.Marshal(results); err == nil {
+								if jso, werr = json.Marshal(results); werr == nil {
 									if err := ioutil.WriteFile(fileName, jso, 0644); err != nil {
 										return err
 									}
@@ -639,15 +638,15 @@ func main() {
 						Name:  "restore-table-to-point-in-time",
 						Usage: "restore table to point in time",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "source-table-name",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "target-table-name",
 								Value: "",
 							},
@@ -685,27 +684,27 @@ func main() {
 						Name:  "search",
 						Usage: "search for records using scan operation",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "filter-expression",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "expression-attribute-values",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "projection-expression",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "file-name",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "table-name",
 								Value: "",
 							},
@@ -772,8 +771,8 @@ func main() {
 										if shouldWriteToFile {
 											l = append(l, elem)
 										} else {
-											if json, err := json.Marshal(elem); err == nil {
-												if _, err := writer.Write(json); err != nil {
+											if j, err := json.Marshal(elem); err == nil {
+												if _, err := writer.Write(j); err != nil {
 													fmt.Printf("%v", elem)
 													panic(err)
 												}
@@ -800,7 +799,7 @@ func main() {
 							if shouldWriteToFile {
 								var jso []byte
 								var werr error
-								if jso, werr = json.Marshal(l); err == nil {
+								if jso, werr = json.Marshal(l); werr == nil {
 									if err := ioutil.WriteFile(fileName, jso, 0644); err != nil {
 										return err
 									}
@@ -822,24 +821,24 @@ func main() {
 						Name:  "delete-backup",
 						Usage: "delete backup(s)",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
-							cli.StringSliceFlag{
+							&cli.StringSliceFlag{
 								Name: "table-name",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "time-range-upper-bound",
 								Value: "",
 								Usage: "only backups created before this time will be deleted. It is exclusive",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "older-than",
 								Value: "",
 								Usage: "age in days",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "backup-type",
 								Value: "USER",
 								Usage: "USER, SYSTEM or ALL",
@@ -922,19 +921,19 @@ func main() {
 				},
 			}
 		}(),
-		func() cli.Command {
-			return cli.Command{
+		func() *cli.Command {
+			return &cli.Command{
 				Name: "sqs",
-				Subcommands: []cli.Command{
+				Subcommands: []*cli.Command{
 					{
 						Name:  "purge",
 						Usage: "purge all messages",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "queue-name",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
@@ -972,21 +971,21 @@ func main() {
 						Name:  "send",
 						Usage: "send message to sqs",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "queue-name",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name: "input-file-name",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name: "input",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "message-attributes",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
@@ -1066,15 +1065,15 @@ func main() {
 						Name:  "describe",
 						Usage: "get all attributes",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "queue-name",
 								Value: "",
 							},
-							cli.StringSliceFlag{
+							&cli.StringSliceFlag{
 								Name: "attribute-names",
 								Value: func() *cli.StringSlice {
 									ss := &cli.StringSlice{}
@@ -1122,15 +1121,15 @@ func main() {
 						Name:  "receive-message",
 						Usage: "receive-message",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "queue-name",
 								Value: "",
 							},
-							cli.Int64Flag{
+							&cli.Int64Flag{
 								Name:  "max-number-of-messages",
 								Value: 10,
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
@@ -1173,14 +1172,14 @@ func main() {
 						Name:  "delete-message",
 						Usage: "delete-message",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "queue-name",
 								Value: "",
 							},
-							cli.StringSliceFlag{
+							&cli.StringSliceFlag{
 								Name: "receipt-handle",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
@@ -1210,30 +1209,30 @@ func main() {
 				},
 			}
 		}(),
-		func() cli.Command {
-			return cli.Command{
+		func() *cli.Command {
+			return &cli.Command{
 				Name: "sns",
-				Subcommands: []cli.Command{
+				Subcommands: []*cli.Command{
 					{
 						Name:  "publish",
 						Usage: "publish many messages",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "topic-name",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name: "message",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "times",
 								Value: "1",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "delay",
 								Value: "0",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
@@ -1257,6 +1256,9 @@ func main() {
 							var wg sync.WaitGroup
 							listTopicsParams := sns.ListTopicsInput{}
 							out, err := sqsc.ListTopics(&listTopicsParams)
+							if err != nil {
+								return err
+							}
 							for _, topic := range out.Topics {
 								if strings.Contains(*topic.TopicArn, topicName) {
 									for i := 0; i < times; i++ {
@@ -1289,18 +1291,18 @@ func main() {
 				},
 			}
 		}(),
-		func() cli.Command {
-			return cli.Command{
+		func() *cli.Command {
+			return &cli.Command{
 				Name: "cloudwatch",
-				Subcommands: []cli.Command{
+				Subcommands: []*cli.Command{
 					{
 						Name:  "delete-alarm",
 						Usage: "deletes cloudwatch alarm(s)",
 						Flags: []cli.Flag{
-							cli.StringSliceFlag{
+							&cli.StringSliceFlag{
 								Name: "name",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
@@ -1330,24 +1332,24 @@ func main() {
 				},
 			}
 		}(),
-		func() cli.Command {
-			return cli.Command{
+		func() *cli.Command {
+			return &cli.Command{
 				Name: "cloudwatchlogs",
-				Subcommands: []cli.Command{
+				Subcommands: []*cli.Command{
 					{
 						Name:  "retention",
 						Usage: "set log group retention in days",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "log-group-name",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "days",
 								Usage: "retention in days",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
@@ -1377,21 +1379,21 @@ func main() {
 						Name:  "write-to-file",
 						Usage: "writes events to file in json format",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "log-group-name",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "file-name",
 								Usage: "output file name",
 								Value: "output",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "filter-pattern",
 								Usage: "the filter pattern to use. If not provided, all the events are matched",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
@@ -1434,15 +1436,15 @@ func main() {
 						Name:  "delete-subscription-filter",
 						Usage: "delete subscription for log group",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "log-group-name",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "filter-name",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
@@ -1478,11 +1480,11 @@ func main() {
 						Name:  "delete-all-subscription-filters",
 						Usage: "delete all subscriptions for log group",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "log-group-name",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
@@ -1525,11 +1527,11 @@ func main() {
 						Name:  "describe",
 						Usage: "describe log groups",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "log-group-name-prefix",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
@@ -1559,11 +1561,11 @@ func main() {
 						Name:  "summary",
 						Usage: "summary log groups",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "log-group-name-prefix",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
@@ -1591,19 +1593,19 @@ func main() {
 				},
 			}
 		}(),
-		func() cli.Command {
-			return cli.Command{
+		func() *cli.Command {
+			return &cli.Command{
 				Name: "ssm",
-				Subcommands: []cli.Command{
+				Subcommands: []*cli.Command{
 					{
 						Name:  "export",
 						Usage: "exports all ssm parameters and their values to json",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "output-file-name",
 								Value: "ssm.json",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
@@ -1649,18 +1651,18 @@ func main() {
 				},
 			}
 		}(),
-		func() cli.Command {
-			return cli.Command{
+		func() *cli.Command {
+			return &cli.Command{
 				Name: "secretsmanager",
-				Subcommands: []cli.Command{
+				Subcommands: []*cli.Command{
 					{
 						Name:        "get-secret-value",
 						Description: "Gets secret value",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name: "secret-id",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
@@ -1693,11 +1695,11 @@ func main() {
 						Name:  "export",
 						Usage: "exports secrets and their values to json",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "output-file-name",
 								Value: "secretsmanager.json",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
@@ -1750,7 +1752,7 @@ func main() {
 						Name:  "delete-all",
 						Usage: "deletes all values from secretsmanager",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
@@ -1788,10 +1790,10 @@ func main() {
 						Name:  "restore-all",
 						Usage: "resotres all values from input file",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name: "input-file-name",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
@@ -1834,10 +1836,10 @@ func main() {
 						Name:  "create-secrets",
 						Usage: "createsSecrets from file",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name: "input-file-name",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
@@ -1902,10 +1904,10 @@ func main() {
 						Name:  "update",
 						Usage: "update secrets from file",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name: "input-file-name",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
@@ -1969,23 +1971,23 @@ func main() {
 				},
 			}
 		}(),
-		func() cli.Command {
-			return cli.Command{
+		func() *cli.Command {
+			return &cli.Command{
 				Name: "kinesis",
-				Subcommands: []cli.Command{
+				Subcommands: []*cli.Command{
 					{
 						Name:  "update-shard-count",
 						Usage: "update shard count",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "stream-name",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "count",
 								Value: "1",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
@@ -2019,16 +2021,16 @@ func main() {
 				},
 			}
 		}(),
-		func() cli.Command {
-			return cli.Command{
+		func() *cli.Command {
+			return &cli.Command{
 				Name:        "base64",
 				Description: "encoding/decoding base64",
-				Subcommands: []cli.Command{
+				Subcommands: []*cli.Command{
 					{
 						Name:  "encode",
 						Usage: "encodes string to base64",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "input",
 								Value: "",
 							},
@@ -2049,7 +2051,7 @@ func main() {
 						Name:  "decode",
 						Usage: "decodes base64 encoded string",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "input",
 								Value: "",
 							},
@@ -2072,24 +2074,24 @@ func main() {
 				},
 			}
 		}(),
-		func() cli.Command {
-			return cli.Command{
+		func() *cli.Command {
+			return &cli.Command{
 				Name: "s3",
-				Subcommands: []cli.Command{
+				Subcommands: []*cli.Command{
 					{
 						Name:  "purge",
 						Usage: "delete all objects and it versions",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "bucket-name",
 								Value: "",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "filter",
 								Value: "",
 								Usage: "delete only objects matching filter",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
@@ -2169,26 +2171,26 @@ func main() {
 				},
 			}
 		}(),
-		func() cli.Command {
-			return cli.Command{
+		func() *cli.Command {
+			return &cli.Command{
 				Name: "apigateway",
-				Subcommands: []cli.Command{
+				Subcommands: []*cli.Command{
 					{
 						Name:        "export",
 						Description: "exports all API specifications in oas3 and saves to files",
 						Usage:       "export specifications ",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "file-type",
 								Value: "yaml",
 								Usage: "'json' or 'yaml'",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "export-type",
 								Value: "oas30",
 								Usage: "'oas30' for OpenAPI 3.0.x and 'swagger' for Swagger/OpenAPI 2.0",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
@@ -2259,27 +2261,27 @@ func main() {
 			Name:        "test",
 			Description: "load test",
 			Usage:       "load testing commands",
-			Subcommands: []cli.Command{
+			Subcommands: []*cli.Command{
 				{
 					Name: "http",
 					Flags: []cli.Flag{
-						cli.StringSliceFlag{
+						&cli.StringSliceFlag{
 							Name:  "url",
 							Usage: "url",
 						},
-						cli.IntFlag{
+						&cli.IntFlag{
 							Name:  "frequency",
 							Value: 1,
 							Usage: "frequency (number of occurrences) per second",
 						},
-						cli.StringFlag{
+						&cli.StringFlag{
 							Name:  "duration",
 							Value: "1s",
 							Usage: "a duration string is a possibly signed sequence of decimal numbers, each with " +
 								"optional fraction and a unit suffix, such as '300ms', '-1.5h' or '2h45m'. " +
 								"Valid time units are 'ns', 'us' (or 'µs'), 'ms', 's', 'm', 'h'",
 						},
-						cli.StringFlag{
+						&cli.StringFlag{
 							Name:  "authorization",
 							Usage: "authorization header for all requests",
 						},
@@ -2332,15 +2334,15 @@ func main() {
 				},
 			},
 		},
-		func() cli.Command {
-			return cli.Command{
+		func() *cli.Command {
+			return &cli.Command{
 				Name: "kafka",
-				Subcommands: []cli.Command{
+				Subcommands: []*cli.Command{
 					{
 						Name:  "list-clusters",
 						Usage: "",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name: "profile",
 							},
 						},
@@ -2367,11 +2369,11 @@ func main() {
 						Name:  "describe-cluster",
 						Usage: "",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "cluster-name",
 								Usage: "MSK cluster name, eg 'kafka-dev'",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name: "profile",
 							},
 						},
@@ -2410,11 +2412,11 @@ func main() {
 						Name:  "get-bootstrap-brokers",
 						Usage: "",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "cluster-name",
 								Usage: "MSK cluster name, eg 'kafka-dev'",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name: "profile",
 							},
 						},
@@ -2442,23 +2444,23 @@ func main() {
 						Name:        "send",
 						Description: "send message to topic",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "cluster-name",
 								Usage: "MSK cluster name, eg 'kafka-dev'",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "bootstrap-broker",
 								Usage: "bootstrap broker, eg. localhost:9092",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "topic",
 								Usage: "topic name",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "message",
 								Usage: "message body",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name: "profile",
 							},
 						},
@@ -2499,34 +2501,34 @@ func main() {
 						Name:        "create-topic",
 						Description: "crates the topic",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "cluster-name",
 								Usage: "MSK cluster name, eg 'kafka-dev'",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "bootstrap-broker",
 								Usage: "bootstrap broker, eg. localhost:9092",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "topic",
 								Usage: "topic name",
 							},
-							cli.IntFlag{
+							&cli.IntFlag{
 								Name:  "num-partitions",
 								Value: 1,
 								Usage: "number of partitions",
 							},
-							cli.IntFlag{
+							&cli.IntFlag{
 								Name:  "replication-factor",
 								Value: 1,
 								Usage: "replication factor",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "retention-ms",
 								Value: "-1",
 								Usage: "retention ms",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
@@ -2568,19 +2570,19 @@ func main() {
 						Name:        "delete-topic",
 						Description: "deletes the topic",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "cluster-name",
 								Usage: "MSK cluster name, eg 'kafka-dev'",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "bootstrap-broker",
 								Usage: "bootstrap broker, eg. localhost:9092",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "topic",
 								Usage: "topic name",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name: "profile",
 							},
 						},
@@ -2617,20 +2619,20 @@ func main() {
 						Name:        "describe-topic",
 						Description: "describe topic",
 						Flags: []cli.Flag{
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "cluster-name",
 								Value: "",
 								Usage: "MSK cluster name, eg 'kafka-dev'",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name:  "bootstrap-broker",
 								Usage: "bootstrap broker, eg. localhost:9092",
 							},
-							cli.StringSliceFlag{
+							&cli.StringSliceFlag{
 								Name:  "topic",
 								Usage: "topic(s) name",
 							},
-							cli.StringFlag{
+							&cli.StringFlag{
 								Name: "profile",
 							},
 						},
