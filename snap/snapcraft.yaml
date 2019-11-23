@@ -11,17 +11,16 @@ base: core18
 
 parts:
   flow:
+    plugin: nil
     source: .
-    plugin: go
-    go-importpath: github.com/flow-lab/flow
-    build-attributes: [no-patchelf]
     build-snaps: [go]
     build-packages: [gcc]
+    build-attributes: [no-patchelf]
     override-build: |
       export GOBIN=$SNAPCRAFT_PART_INSTALL/bin
       export GO111MODULE=on
       export CGO_ENABLED=0
-      make build
+      go build ./...
 
 apps:
   flow:
