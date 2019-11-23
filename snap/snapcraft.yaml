@@ -21,6 +21,7 @@ parts:
       export CGO_ENABLED=0
       mkdir -p $SNAPCRAFT_PART_INSTALL/bin
       go build -o $SNAPCRAFT_PART_INSTALL/bin ./...
+      go build -v -ldflags="-X 'main.version=$(git describe --tags)' -X 'main.commit=$(git rev-parse HEAD)' -X 'main.date=$(date)'" -o $SNAPCRAFT_PART_INSTALL/bin ./...
 
 apps:
   flow:
