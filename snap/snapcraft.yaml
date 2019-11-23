@@ -14,15 +14,13 @@ parts:
     plugin: nil
     source: .
     build-snaps: [go]
-    build-packages: [gcc,make]
+    build-packages: [gcc]
     build-attributes: [no-patchelf]
     override-build: |
-      export GOBIN=${PWD}/bin
       export GO111MODULE=on
       export CGO_ENABLED=0
-      make install
-      mkdir $SNAPCRAFT_PART_INSTALL/bin
-      cp bin/flow $SNAPCRAFT_PART_INSTALL/bin
+      mkdir -p $SNAPCRAFT_PART_INSTALL/bin
+      go build -o $SNAPCRAFT_PART_INSTALL/bin ./...
 
 apps:
   flow:
