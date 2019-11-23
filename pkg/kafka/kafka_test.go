@@ -3,7 +3,7 @@ package kafka
 import (
 	"github.com/Shopify/sarama"
 	smocks "github.com/Shopify/sarama/mocks"
-	mocks2 "github.com/flow-lab/flow/internal/mocks"
+	mocks2 "github.com/flow-lab/flow/pkg/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"testing"
