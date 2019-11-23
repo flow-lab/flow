@@ -17,6 +17,8 @@ parts:
     build-attributes: [no-patchelf]
     build-snaps: [go]
     build-packages: [gcc]
+    build-environment:
+    - GO11MODULE: "on"
 
 apps:
   flow:
