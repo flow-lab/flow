@@ -17,8 +17,11 @@ parts:
     build-attributes: [no-patchelf]
     build-snaps: [go]
     build-packages: [gcc]
-    build-environment:
-    - GO11MODULE: "on"
+    override-build: |
+      export GOBIN=$SNAPCRAFT_PART_INSTALL/bin
+      export GO111MODULE=on
+      export CGO_ENABLED=0
+      make build
 
 apps:
   flow:
