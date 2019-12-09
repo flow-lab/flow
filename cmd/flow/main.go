@@ -2031,18 +2031,32 @@ func main() {
 						Usage: "encodes string to base64",
 						Flags: []cli.Flag{
 							&cli.StringFlag{
-								Name:  "input",
-								Value: "",
+								Name: "input",
+							},
+							&cli.StringFlag{
+								Name: "file",
 							},
 						},
 						Action: func(c *cli.Context) error {
 							input := c.String("input")
-							if input == "" {
-								return fmt.Errorf("missing --input")
+							file := c.String("file")
+							if input == "" && file == "" {
+								return fmt.Errorf("--input or --file should be given")
 							}
 
-							encode := base64.Encode(input)
-							fmt.Println(string(encode))
+							if input != "" {
+								encode := base64.Encode(input)
+								fmt.Println(string(encode))
+							}
+
+							if file != "" {
+								b, err := ioutil.ReadFile(file)
+								if err != nil {
+									return err
+								}
+								encode := base64.Encode(string(b))
+								fmt.Println(string(encode))
+							}
 
 							return nil
 						},

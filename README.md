@@ -171,6 +171,10 @@ NOTE: Flow CLI is under development, and may occasionally make backwards-incompa
 
     `flow base64 encode --input "hello"`
 
+* encode base64 file
+
+    `flow base64 encode --file input.json`
+
 * decode base64
 
     `flow base64 decode --input "aGVsbG8="`
