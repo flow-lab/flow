@@ -18,13 +18,16 @@ import (
 	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/flow-lab/flow/internal/base64"
+	"github.com/flow-lab/flow/internal/creds"
 	flowdynamo "github.com/flow-lab/flow/internal/dynamodb"
 	flowkafka "github.com/flow-lab/flow/internal/kafka"
 	"github.com/flow-lab/flow/internal/logs"
 	"github.com/flow-lab/flow/internal/msk"
 	"github.com/flow-lab/flow/internal/session"
 	flowsqs "github.com/flow-lab/flow/internal/sqs"
+	flowsts "github.com/flow-lab/flow/internal/sts"
 	vegeta "github.com/tsenart/vegeta/lib"
 	"io/ioutil"
 	"log"
@@ -2690,6 +2693,56 @@ func main() {
 								return fmt.Errorf("unable to serialize response")
 							}
 							fmt.Printf("%v", string(bytes))
+
+							return nil
+						},
+					},
+				},
+			}
+		}(),
+		func() *cli.Command {
+			return &cli.Command{
+				Name: "sts",
+				Subcommands: []*cli.Command{
+					{
+						Name:  "assume-role",
+						Usage: "",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name: "profile",
+							},
+							&cli.StringFlag{
+								Name:     "role-arn",
+								Required: true,
+							},
+							&cli.StringFlag{
+								Name:  "region",
+								Value: "eu-west-1",
+							},
+							&cli.Int64Flag{
+								Name:  "duration-seconds",
+								Value: 3600,
+							},
+						},
+						Action: func(c *cli.Context) error {
+							profile := c.String("profile")
+							roleArn := c.String("role-arn")
+							region := c.String("region")
+							durationSeconds := c.Int64("duration-seconds")
+							sess := session.NewSessionWithSharedProfile(profile)
+							client := sts.New(sess)
+
+							err, cred := flowsts.AssumeRole(context.Background(), client, durationSeconds, "flow", roleArn)
+							if err != nil {
+								return err
+							}
+
+							err, s := creds.GenerateEnv(region, *cred.AccessKeyId, *cred.SecretAccessKey, *cred.SessionToken)
+							if err != nil {
+								return err
+							}
+
+							fmt.Println(s)
 
 							return nil
 						},

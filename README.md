@@ -165,6 +165,19 @@ NOTE: Flow CLI is under development, and may occasionally make backwards-incompa
 
      `flow kafka describe-topic --cluster-name "MSK-Dev" --topic "topic-name-0" --topic "topic-name-1"`
 
+### STS
+
+* assume _my-role_ in _111111111111_ account and generate intellij friendly env variables
+
+    `flow sts assume-role --role-arn "arn:aws:iam::111111111111:role/service-role/my-role"`
+    output:
+    ```
+    AWS_REGION=eu-west-1
+    AWS_ACCESS_KEY_ID=A..B
+    AWS_SECRET_ACCESS_KEY=1..F
+    AWS_SESSION_TOKEN=F..g
+    ```
+
 ### base64
     
 * encode base64
