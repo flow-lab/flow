@@ -9,6 +9,8 @@ require (
 	github.com/eapache/go-resiliency v1.2.0 // indirect
 	github.com/frankban/quicktest v1.5.0 // indirect
 	github.com/golang/mock v1.3.1
+	github.com/google/go-github/v27 v27.0.6
+	github.com/google/go-github/v28 v28.1.1
 	github.com/influxdata/tdigest v0.0.1 // indirect
 	github.com/jcmturner/gofork v1.0.0 // indirect
 	github.com/klauspost/compress v1.9.2 // indirect
@@ -22,6 +24,7 @@ require (
 	golang.org/x/crypto v0.0.0-20191119213627-4f8c1d86b1ba // indirect
 	golang.org/x/exp v0.0.0-20191002040644-a1355ae1e2c3 // indirect
 	golang.org/x/net v0.0.0-20191119073136-fc4aabc6c914 // indirect
+	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/text v0.3.2 // indirect
 	gonum.org/v1/gonum v0.0.0-20190929233944-b20cf7805fc4 // indirect
 	gonum.org/v1/netlib v0.0.0-20190926062253-2d6e29b73a19 // indirect
