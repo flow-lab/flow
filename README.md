@@ -165,7 +165,7 @@ NOTE: Flow CLI is under development, and may occasionally make backwards-incompa
 
      `flow kafka describe-topic --cluster-name "MSK-Dev" --topic "topic-name-0" --topic "topic-name-1"`
 
-### STS
+### sts
 
 * assume _my-role_ in _111111111111_ account and generate intellij friendly env variables
 
