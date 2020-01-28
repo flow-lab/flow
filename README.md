@@ -1,4 +1,4 @@
-# Flow AWS tooling [![Build Status](https://travis-ci.org/flow-lab/flow.svg?branch=master)](https://travis-ci.org/flow-lab/flow) [![Snap Status](https://build.snapcraft.io/badge/flow-lab/flow.svg)](https://build.snapcraft.io/user/flow-lab/flow)
+# Flow AWS tooling ![goreleaser](https://github.com/flow-lab/flow/workflows/goreleaser/badge.svg) [![Snap Status](https://build.snapcraft.io/badge/flow-lab/flow.svg)](https://build.snapcraft.io/user/flow-lab/flow)
 
 Flow is a CLI tooling that helps developing applications on AWS. Is meant to be used only in dev environments
 and not in production.
