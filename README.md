@@ -178,6 +178,22 @@ NOTE: Flow CLI is under development, and may occasionally make backwards-incompa
     AWS_SESSION_TOKEN=F..g
     ```
 
+### pubsub
+
+This commands are designed to use with [Flow Pub/Sub emulator](https://github.com/flow-lab/flow-pubsub) running on Kubernetes.
+
+* create topic
+    
+    `flow pubsub create-topic -t user`
+
+* create subscription
+    
+    `flow pubsub create-subscription -t user --sub user`
+    
+* publish file content with attributes
+
+    `cat message.json | flow pubsub publish -t user -attr "{\"event-type\":\"user-created\"}"`
+
 ### base64
     
 * encode base64
@@ -207,28 +223,42 @@ NOTE: Flow CLI is under development, and may occasionally make backwards-incompa
 
 help:
 ```sh
-flow --help
 NAME:
-   development tooling for AWS - A new cli application
+   Flow - Development CLI
 
 USAGE:
    flow [global options] command [command options] [arguments...]
 
 VERSION:
-   0.1.0
+   dev
+
+DESCRIPTION:
+   flow cli. Commit none, build at unknown
+
+AUTHOR:
+   Krzysztof Grodzicki <krzysztof@flowlab.no>
 
 COMMANDS:
-     dynamodb        
-     sqs             
-     sns             
-     cloudwatch      
-     cloudwatchlogs  
-     ssm             
-     help, h         Shows a list of commands or help for one command
+   dynamodb        AWS DynamoDB
+   sqs             AWS SQS
+   sns             AWS SNS
+   cloudwatch      AWS CloudWatch
+   cloudwatchlogs  AWS CloudWatch Logs
+   ssm             AWS SSM
+   secretsmanager  AWS SecretsManager
+   kinesis         AWS Kinesis
+   base64          encoding/decoding base64
+   s3              AWS S3
+   apigateway      AWS API Gateway
+   test            HTTP load testing commands
+   kafka           AWS MSK
+   sts             AWS STS
+   pubsub          GCP Pub/Sub for testing locally with emulator
+   help, h         Shows a list of commands or help for one command
 
 GLOBAL OPTIONS:
-   --help, -h     show help
-   --version, -v  print the version
+   --help, -h     show help (default: false)
+   --version, -v  print the version (default: false)
 ```
 
 or
@@ -251,6 +281,7 @@ OPTIONS:
 
 ## authentication
 
+### AWS
 Flow will be configured and will authenticate using the same methods defined by [aws-cli][auth].
 
 Currently it supports authentication with:
@@ -275,3 +306,12 @@ Currently it supports authentication with:
 [envProvider]: https://docs.aws.amazon.com/sdk-for-go/api/aws/credentials/#EnvProvider
 [sharedCredentialsProvider]: https://docs.aws.amazon.com/sdk-for-go/api/aws/credentials/#SharedCredentialsProvider
 [session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
+
+### GCP
+For Google Cloud Platform (GCP) commands set the _PUBSUB_EMULATOR_HOST_ environment variable. Set also the _PUBSUB_PROJECT_ID_ 
+environment variable for the project you want to use for the emulator. For example:
+
+```
+export PUBSUB_EMULATOR_HOST=localhost:8432
+export PUBSUB_PROJECT_ID=my-project-id
+```

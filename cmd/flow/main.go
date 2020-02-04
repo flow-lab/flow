@@ -25,6 +25,8 @@ import (
 	flowkafka "github.com/flow-lab/flow/internal/kafka"
 	"github.com/flow-lab/flow/internal/logs"
 	"github.com/flow-lab/flow/internal/msk"
+	flowpubsub "github.com/flow-lab/flow/internal/pubsub"
+	"github.com/flow-lab/flow/internal/reader"
 	"github.com/flow-lab/flow/internal/session"
 	flowsqs "github.com/flow-lab/flow/internal/sqs"
 	flowsts "github.com/flow-lab/flow/internal/sts"
@@ -86,7 +88,8 @@ func main() {
 	app.Commands = []*cli.Command{
 		func() *cli.Command {
 			return &cli.Command{
-				Name: "dynamodb",
+				Name:  "dynamodb",
+				Usage: "AWS DynamoDB",
 				Subcommands: []*cli.Command{
 					{
 						Name:  "delete",
@@ -926,7 +929,8 @@ func main() {
 		}(),
 		func() *cli.Command {
 			return &cli.Command{
-				Name: "sqs",
+				Name:  "sqs",
+				Usage: "AWS SQS",
 				Subcommands: []*cli.Command{
 					{
 						Name:  "purge",
@@ -1214,7 +1218,8 @@ func main() {
 		}(),
 		func() *cli.Command {
 			return &cli.Command{
-				Name: "sns",
+				Name:  "sns",
+				Usage: "AWS SNS",
 				Subcommands: []*cli.Command{
 					{
 						Name:  "publish",
@@ -1296,7 +1301,8 @@ func main() {
 		}(),
 		func() *cli.Command {
 			return &cli.Command{
-				Name: "cloudwatch",
+				Name:  "cloudwatch",
+				Usage: "AWS CloudWatch",
 				Subcommands: []*cli.Command{
 					{
 						Name:  "delete-alarm",
@@ -1337,7 +1343,8 @@ func main() {
 		}(),
 		func() *cli.Command {
 			return &cli.Command{
-				Name: "cloudwatchlogs",
+				Name:  "cloudwatchlogs",
+				Usage: "AWS CloudWatch Logs",
 				Subcommands: []*cli.Command{
 					{
 						Name:  "retention",
@@ -1598,7 +1605,8 @@ func main() {
 		}(),
 		func() *cli.Command {
 			return &cli.Command{
-				Name: "ssm",
+				Name:  "ssm",
+				Usage: "AWS SSM",
 				Subcommands: []*cli.Command{
 					{
 						Name:  "export",
@@ -1656,7 +1664,8 @@ func main() {
 		}(),
 		func() *cli.Command {
 			return &cli.Command{
-				Name: "secretsmanager",
+				Name:  "secretsmanager",
+				Usage: "AWS SecretsManager",
 				Subcommands: []*cli.Command{
 					{
 						Name:        "get-secret-value",
@@ -1976,7 +1985,8 @@ func main() {
 		}(),
 		func() *cli.Command {
 			return &cli.Command{
-				Name: "kinesis",
+				Name:  "kinesis",
+				Usage: "AWS Kinesis",
 				Subcommands: []*cli.Command{
 					{
 						Name:  "update-shard-count",
@@ -2028,6 +2038,7 @@ func main() {
 			return &cli.Command{
 				Name:        "base64",
 				Description: "encoding/decoding base64",
+				Usage:       "encoding/decoding base64",
 				Subcommands: []*cli.Command{
 					{
 						Name:  "encode",
@@ -2093,7 +2104,8 @@ func main() {
 		}(),
 		func() *cli.Command {
 			return &cli.Command{
-				Name: "s3",
+				Name:  "s3",
+				Usage: "AWS S3",
 				Subcommands: []*cli.Command{
 					{
 						Name:  "purge",
@@ -2190,7 +2202,8 @@ func main() {
 		}(),
 		func() *cli.Command {
 			return &cli.Command{
-				Name: "apigateway",
+				Name:  "apigateway",
+				Usage: "AWS API Gateway",
 				Subcommands: []*cli.Command{
 					{
 						Name:        "export",
@@ -2277,7 +2290,7 @@ func main() {
 		{
 			Name:        "test",
 			Description: "load test",
-			Usage:       "load testing commands",
+			Usage:       "HTTP load testing commands",
 			Subcommands: []*cli.Command{
 				{
 					Name: "http",
@@ -2353,7 +2366,8 @@ func main() {
 		},
 		func() *cli.Command {
 			return &cli.Command{
-				Name: "kafka",
+				Name:  "kafka",
+				Usage: "AWS MSK",
 				Subcommands: []*cli.Command{
 					{
 						Name:  "list-clusters",
@@ -2702,7 +2716,8 @@ func main() {
 		}(),
 		func() *cli.Command {
 			return &cli.Command{
-				Name: "sts",
+				Name:  "sts",
+				Usage: "AWS STS",
 				Subcommands: []*cli.Command{
 					{
 						Name:  "assume-role",
@@ -2745,6 +2760,167 @@ func main() {
 							fmt.Println(s)
 
 							return nil
+						},
+					},
+				},
+			}
+		}(),
+		func() *cli.Command {
+			return &cli.Command{
+				Name:  "pubsub",
+				Usage: "GCP Pub/Sub for testing locally with emulator",
+				Subcommands: []*cli.Command{
+					{
+						Name:  "create-topic",
+						Usage: "Create topic",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:     "topic",
+								Aliases:  []string{"t"},
+								Required: true,
+							},
+							&cli.StringFlag{
+								Name:     "project-id",
+								EnvVars:  []string{"PUBSUB_PROJECT_ID"},
+								Required: true,
+							},
+							&cli.StringFlag{
+								Name:     "pubsub-emulator-host",
+								Aliases:  []string{"eh"},
+								EnvVars:  []string{"PUBSUB_EMULATOR_HOST"},
+								Usage:    "Pub/Sub emulator host like: 192.168.64.3:30867",
+								Required: true,
+							},
+						},
+						Action: func(c *cli.Context) error {
+							topic := c.String("topic")
+							projectID := c.String("project-id")
+							eh := c.String("pubsub-emulator-host")
+
+							if err := os.Setenv("PUBSUB_EMULATOR_HOST", eh); err != nil {
+								return err
+							}
+
+							timeout, cancelFunc := context.WithTimeout(context.Background(), 3*time.Second)
+							defer cancelFunc()
+
+							client, err := flowpubsub.NewPubSubClient(timeout, projectID)
+							if err != nil {
+								return err
+							}
+
+							return flowpubsub.CreateTopic(timeout, client, topic)
+						},
+					},
+					{
+						Name:  "create-subscription",
+						Usage: "Create Subscription for a given topic",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:     "topic",
+								Aliases:  []string{"t"},
+								Required: true,
+							},
+							&cli.StringFlag{
+								Name:     "subscription",
+								Aliases:  []string{"sub"},
+								Required: true,
+							},
+							&cli.StringFlag{
+								Name:     "project-id",
+								EnvVars:  []string{"PUBSUB_PROJECT_ID"},
+								Required: true,
+							},
+							&cli.StringFlag{
+								Name:     "pubsub-emulator-host",
+								Aliases:  []string{"eh"},
+								EnvVars:  []string{"PUBSUB_EMULATOR_HOST"},
+								Usage:    "Pub/Sub emulator host like: 192.168.64.3:30867",
+								Required: true,
+							},
+						},
+						Action: func(c *cli.Context) error {
+							topic := c.String("topic")
+							subscription := c.String("subscription")
+							projectID := c.String("project-id")
+							eh := c.String("pubsub-emulator-host")
+
+							if err := os.Setenv("PUBSUB_EMULATOR_HOST", eh); err != nil {
+								return err
+							}
+
+							timeout, cancelFunc := context.WithTimeout(context.Background(), 3*time.Second)
+							defer cancelFunc()
+
+							client, err := flowpubsub.NewPubSubClient(timeout, projectID)
+							if err != nil {
+								return err
+							}
+
+							return flowpubsub.CreateSubscription(timeout, client, topic, subscription)
+						},
+					},
+					{
+						Name:  "publish",
+						Usage: "Publish message to topic",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:     "topic",
+								Aliases:  []string{"t"},
+								Required: true,
+							},
+							&cli.StringFlag{
+								Name:    "message",
+								Aliases: []string{"msg"},
+								Usage:   "The message. Will be initialized from stdin if empty",
+							},
+							&cli.StringFlag{
+								Name:    "attributes",
+								Aliases: []string{"attr"},
+								Usage:   "The attributes like: {\"event-type\":\"user-updated\",\"key\":\"val\"}",
+							},
+							&cli.StringFlag{
+								Name:    "project-id",
+								EnvVars: []string{"PUBSUB_PROJECT_ID"},
+							},
+							&cli.StringFlag{
+								Name:     "pubsub-emulator-host",
+								Aliases:  []string{"eh"},
+								EnvVars:  []string{"PUBSUB_EMULATOR_HOST"},
+								Usage:    "Pub/Sub emulator host like: 192.168.64.3:30867",
+								Required: true,
+							},
+						},
+						Action: func(c *cli.Context) error {
+							topic := c.String("topic")
+							msg := c.String("message")
+							attributes := c.String("attributes")
+							projectID := c.String("project-id")
+							eh := c.String("pubsub-emulator-host")
+
+							if err := os.Setenv("PUBSUB_EMULATOR_HOST", eh); err != nil {
+								return err
+							}
+
+							if msg == "" {
+								msg = reader.ReadStdin()
+							}
+
+							var attr map[string]string
+							if attributes != "" {
+								if err := json.Unmarshal([]byte(attributes), &attr); err != nil {
+									return err
+								}
+							}
+
+							timeout, cancelFunc := context.WithTimeout(context.Background(), 3*time.Second)
+							defer cancelFunc()
+
+							client, err := flowpubsub.NewPubSubClient(timeout, projectID)
+							if err != nil {
+								return err
+							}
+							return flowpubsub.Publish(timeout, client, topic, msg, attr)
 						},
 					},
 				},
