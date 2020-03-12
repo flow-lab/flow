@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/apigateway"
+	"github.com/aws/aws-sdk-go/service/cloudtrail"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -2921,6 +2922,73 @@ func main() {
 								return err
 							}
 							return flowpubsub.Publish(timeout, client, topic, msg, attr)
+						},
+					},
+				},
+			}
+		}(),
+		func() *cli.Command {
+			return &cli.Command{
+				Name:  "cloudtrail",
+				Usage: "AWS CloudTrail",
+				Subcommands: []*cli.Command{
+					{
+						Name:  "find",
+						Usage: "Find events",
+						Flags: []cli.Flag{
+							&cli.StringSliceFlag{
+								Name:        "contains",
+								DefaultText: "event have to contia",
+							},
+							&cli.TimestampFlag{
+								Name:   "start-time",
+								Layout: time.RFC3339,
+								Value:  cli.NewTimestamp(time.Now().Add(-1 * time.Hour)),
+							},
+							&cli.TimestampFlag{
+								Name:   "end-time",
+								Layout: time.RFC3339,
+								Value:  cli.NewTimestamp(time.Now()),
+							},
+							&cli.StringFlag{
+								Name: "profile",
+							},
+						},
+						Action: func(c *cli.Context) error {
+							profile := c.String("profile")
+							startTime := c.Timestamp("start-time")
+							endTime := c.Timestamp("end-time")
+							ss := c.StringSlice("error")
+							sess := session.NewSessionWithSharedProfile(profile)
+							ctc := cloudtrail.New(sess)
+
+							r := cloudtrail.LookupEventsInput{
+								EndTime:   endTime,
+								StartTime: startTime,
+							}
+							var events []*cloudtrail.Event
+							defer func() {
+								str, err := json.Marshal(events)
+								if err != nil {
+									panic(err)
+								}
+								fmt.Print(string(str))
+							}()
+							err := ctc.LookupEventsPagesWithContext(context.Background(), &r, func(o *cloudtrail.LookupEventsOutput, b bool) bool {
+								for _, event := range o.Events {
+									if len(ss) == 0 {
+										events = append(events, event)
+										continue
+									}
+									for _, s := range ss {
+										if strings.Contains(*event.CloudTrailEvent, s) {
+											events = append(events, event)
+										}
+									}
+								}
+								return b == true
+							})
+							return err
 						},
 					},
 				},

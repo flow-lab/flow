@@ -177,6 +177,11 @@ NOTE: Flow CLI is under development, and may occasionally make backwards-incompa
     AWS_SECRET_ACCESS_KEY=1..F
     AWS_SESSION_TOKEN=F..g
     ```
+### cloudtrail
+
+* find all cloud trail events containing "unauthorized" or "forbidden" between 2020-03-12T17:00:00Z and 2020-03-12T20:00:00Z
+
+    `flow cloudtrail find --contains "unauthorized" --contains "forbidden" --start-time="2020-03-12T17:00:00Z" --end-time="2020-03-12T20:00:00Z"`
 
 ### pubsub
 
