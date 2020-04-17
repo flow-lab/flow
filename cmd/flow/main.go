@@ -2730,10 +2730,11 @@ func main() {
 							&cli.StringFlag{
 								Name:     "role-arn",
 								Required: true,
+								EnvVars:  []string{"AWS_ROLE_ARN"},
 							},
 							&cli.StringFlag{
-								Name:  "region",
-								Value: "eu-west-1",
+								Name:    "region",
+								EnvVars: []string{"AWS_DEFAULT_REGION"},
 							},
 							&cli.Int64Flag{
 								Name:  "duration-seconds",
