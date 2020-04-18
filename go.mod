@@ -14,6 +14,7 @@ require (
 	github.com/klauspost/compress v1.10.4 // indirect
 	github.com/mailru/easyjson v0.7.1 // indirect
 	github.com/pierrec/lz4 v2.5.1+incompatible // indirect
+	github.com/pkg/errors v0.9.1
 	github.com/rcrowley/go-metrics v0.0.0-20200313005456-10cdbea86bc0 // indirect
 	github.com/streadway/quantile v0.0.0-20150917103942-b0c588724d25 // indirect
 	github.com/stretchr/testify v1.5.1
@@ -28,6 +29,10 @@ require (
 	google.golang.org/api v0.21.0 // indirect
 	google.golang.org/genproto v0.0.0-20200417142217-fb6d0575620b // indirect
 	google.golang.org/grpc v1.28.1 // indirect
+	k8s.io/api v0.0.0-20200416141345-6459cdd1b290
+	k8s.io/apimachinery v0.0.0-20200413181316-06deae5c9c2c
+	k8s.io/client-go v0.0.0-20200416141618-b3b874faea7e
+	sigs.k8s.io/aws-iam-authenticator v0.5.0
 )
 
 go 1.14

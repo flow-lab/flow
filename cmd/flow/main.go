@@ -3,15 +3,18 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	asession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/apigateway"
 	"github.com/aws/aws-sdk-go/service/cloudtrail"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/eks"
 	"github.com/aws/aws-sdk-go/service/kafka"
 	"github.com/aws/aws-sdk-go/service/kinesis"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -20,7 +23,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/flow-lab/flow/internal/base64"
+	flowbase64 "github.com/flow-lab/flow/internal/base64"
 	"github.com/flow-lab/flow/internal/creds"
 	flowdynamo "github.com/flow-lab/flow/internal/dynamodb"
 	flowkafka "github.com/flow-lab/flow/internal/kafka"
@@ -31,11 +34,18 @@ import (
 	"github.com/flow-lab/flow/internal/session"
 	flowsqs "github.com/flow-lab/flow/internal/sqs"
 	flowsts "github.com/flow-lab/flow/internal/sts"
+	"github.com/pkg/errors"
 	vegeta "github.com/tsenart/vegeta/lib"
 	"io/ioutil"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 	"strconv"
 	"strings"
 	"sync"
@@ -2060,7 +2070,7 @@ func main() {
 							}
 
 							if input != "" {
-								encode := base64.Encode(input)
+								encode := flowbase64.Encode(input)
 								fmt.Println(string(encode))
 							}
 
@@ -2069,7 +2079,7 @@ func main() {
 								if err != nil {
 									return err
 								}
-								encode := base64.Encode(string(b))
+								encode := flowbase64.Encode(string(b))
 								fmt.Println(string(encode))
 							}
 
@@ -2091,7 +2101,7 @@ func main() {
 								return fmt.Errorf("missing --input")
 							}
 
-							bytes, err := base64.Decode(input)
+							bytes, err := flowbase64.Decode(input)
 							if err != nil {
 								return fmt.Errorf("call to Decode failed: %s", err)
 							}
@@ -2995,6 +3005,87 @@ func main() {
 				},
 			}
 		}(),
+		func() *cli.Command {
+			return &cli.Command{
+				Name:  "eks",
+				Usage: "AWS EKS",
+				Subcommands: []*cli.Command{
+					{
+						Name:  "dashboard",
+						Usage: "Opens K8 dashboard from local machine",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:     "cluster",
+								Required: true,
+							},
+							&cli.StringFlag{
+								Name: "profile",
+							},
+						},
+						Action: func(c *cli.Context) error {
+							profile := c.String("profile")
+							cluster := c.String("cluster")
+							sess := session.NewSessionWithSharedProfile(profile)
+
+							// new session with assumed role
+							eksc := eks.New(sess)
+							cres, err := eksc.DescribeClusterWithContext(context.Background(), &eks.DescribeClusterInput{Name: aws.String(cluster)})
+							if err != nil {
+								return errors.Wrapf(err, "describe cluster %s", cluster)
+							}
+
+							clientset, err := newClientset(cres.Cluster, sess)
+							if err != nil {
+								return errors.Wrapf(err, "new clientset for %s", cluster)
+							}
+
+							cs := clientset.CoreV1().Secrets("kube-system")
+
+							ls, err := cs.List(context.Background(), metav1.ListOptions{})
+							if err != nil {
+								return errors.Wrapf(err, "list secrets")
+							}
+
+							var s v1.Secret
+							for _, item := range ls.Items {
+								if strings.Contains(item.Name, "eks-admin-token") {
+									s = item
+									break
+								}
+							}
+
+							bytes, ok := s.Data["token"]
+							if !ok {
+								return fmt.Errorf("eks-admin-token not found")
+							}
+
+							fmt.Printf("token: %s\n\n", string(bytes))
+
+							var cmd *exec.Cmd
+							if profile != "" {
+								cmd = exec.Command("aws", "eks", "update-kubeconfig", "--name", cluster, "--profile", profile)
+							} else {
+								cmd = exec.Command("aws", "eks", "update-kubeconfig", "--name", cluster)
+							}
+							fmt.Printf("running command: %s\n", cmd.String())
+							if err := cmd.Run(); err != nil {
+								return errors.Wrapf(err, "update-kubeconfig")
+							}
+
+							rpcmd := exec.Command("kubectl", "proxy")
+							fmt.Printf("running command: %s\n", rpcmd.String())
+							url := " http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/#!/login"
+							fmt.Printf("open in browser(use token from above): %s\n", url)
+							if err := rpcmd.Run(); err != nil {
+								return errors.Wrapf(err, "kubectl proxy")
+							}
+
+							return err
+						},
+					},
+				},
+			}
+		}(),
 	}
 
 	app.Action = func(c *cli.Context) error {
@@ -3006,4 +3097,34 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func newClientset(cluster *eks.Cluster, sess *asession.Session) (*kubernetes.Clientset, error) {
+	gen, err := token.NewGenerator(true, false)
+	if err != nil {
+		return nil, err
+	}
+	opts := &token.GetTokenOptions{
+		ClusterID: aws.StringValue(cluster.Name),
+		Session:   sess,
+	}
+	tok, err := gen.GetWithOptions(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	ca, err := base64.StdEncoding.DecodeString(aws.StringValue(cluster.CertificateAuthority.Data))
+	if err != nil {
+		return nil, err
+	}
+
+	return kubernetes.NewForConfig(
+		&rest.Config{
+			Host:        aws.StringValue(cluster.Endpoint),
+			BearerToken: tok.Token,
+			TLSClientConfig: rest.TLSClientConfig{
+				CAData: ca,
+			},
+		},
+	)
 }

@@ -182,6 +182,20 @@ NOTE: Flow CLI is under development, and may occasionally make backwards-incompa
 * find all cloud trail events containing "unauthorized" or "forbidden" between 2020-03-12T17:00:00Z and 2020-03-12T20:00:00Z
 
     `flow cloudtrail find --contains "unauthorized" --contains "forbidden" --start-time="2020-03-12T17:00:00Z" --end-time="2020-03-12T20:00:00Z"`
+    
+### kubernetes eks
+
+* open EKS Kubernetes dashboard and start kubectl proxy
+
+    `flow eks dashboard --cluster cluster-0`
+    output:
+    ```
+    token: e..g
+  
+    running command: /usr/local/bin/aws eks update-kubeconfig --name cluster-0
+    running command: /usr/local/bin/kubectl proxy
+    open in browser(use token from above):  http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/#!/login
+    ```
 
 ### pubsub
 

@@ -1,4 +1,4 @@
-SHELL := /bin/bash
+SHELL := /bin/bash -e
 
 .DEFAULT_GOAL := help
 
