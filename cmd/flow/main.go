@@ -2969,7 +2969,7 @@ func main() {
 							profile := c.String("profile")
 							startTime := c.Timestamp("start-time")
 							endTime := c.Timestamp("end-time")
-							ss := c.StringSlice("error")
+							ss := c.StringSlice("contains")
 							sess := session.NewSessionWithSharedProfile(profile)
 							ctc := cloudtrail.New(sess)
 
