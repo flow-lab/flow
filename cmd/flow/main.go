@@ -2949,7 +2949,7 @@ func main() {
 						Flags: []cli.Flag{
 							&cli.StringSliceFlag{
 								Name:        "contains",
-								DefaultText: "event have to contia",
+								DefaultText: "event have to contain this string",
 							},
 							&cli.TimestampFlag{
 								Name:   "start-time",
