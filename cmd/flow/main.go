@@ -3075,7 +3075,7 @@ func main() {
 							rpcmd := exec.Command("kubectl", "proxy")
 							fmt.Printf("running command: %s\n", rpcmd.String())
 							ocmd := exec.Command("open", "url")
-							if err := ocmd.Start(); err != nil {
+							if err := ocmd.Run(); err != nil {
 								url := "http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/#!/login"
 								fmt.Printf("open in browser (use token from above to authenticate): \n%s\n", url)
 							}
