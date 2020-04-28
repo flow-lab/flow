@@ -3019,13 +3019,23 @@ func main() {
 								Required: true,
 							},
 							&cli.StringFlag{
+								Name:     "kubeconfig",
+								Required: false,
+								Usage:    "Optionally specify a kubeconfig file to append with your configuration. By default, the configuration is written to the first file path in the KUBECONFIG environment variable (if it is set) or the default kubeconfig path (.kube/config) in your home directory.",
+								Value:    "~/.kube/config",
+								EnvVars:  []string{"KUBECONFIG"},
+							},
+							&cli.StringFlag{
 								Name: "profile",
 							},
 						},
 						Action: func(c *cli.Context) error {
 							profile := c.String("profile")
 							cluster := c.String("cluster")
+							kubeconfig := c.String("kubeconfig")
 							sess := session.NewSessionWithSharedProfile(profile)
+
+							fmt.Printf("using kubeconfig=%s\n", kubeconfig)
 
 							// new session with assumed role
 							eksc := eks.New(sess)
@@ -3063,9 +3073,9 @@ func main() {
 
 							var cmd *exec.Cmd
 							if profile != "" {
-								cmd = exec.Command("aws", "eks", "update-kubeconfig", "--name", cluster, "--profile", profile)
+								cmd = exec.Command("aws", "eks", "update-kubeconfig", "--name", cluster, "--kubeconfig", kubeconfig, "--profile", profile)
 							} else {
-								cmd = exec.Command("aws", "eks", "update-kubeconfig", "--name", cluster)
+								cmd = exec.Command("aws", "eks", "update-kubeconfig", "--name", cluster, "--kubeconfig", kubeconfig)
 							}
 							fmt.Printf("running command: %s\n", cmd.String())
 							if err := cmd.Run(); err != nil {
