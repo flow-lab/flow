@@ -43,8 +43,10 @@ import (
 	"k8s.io/client-go/rest"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 	"strconv"
 	"strings"
@@ -3032,7 +3034,11 @@ func main() {
 						Action: func(c *cli.Context) error {
 							profile := c.String("profile")
 							cluster := c.String("cluster")
-							kubeconfig := c.String("kubeconfig")
+							kubeconfig, err := filepath.Abs(c.String("kubeconfig"))
+							if err != nil {
+								return errors.Wrapf(err, "abs kubeconfig path")
+							}
+							kubeconfig = filepath.Clean(kubeconfig)
 							sess := session.NewSessionWithSharedProfile(profile)
 
 							fmt.Printf("using kubeconfig=%s\n", kubeconfig)
@@ -3044,6 +3050,7 @@ func main() {
 								return errors.Wrapf(err, "describe cluster %s", cluster)
 							}
 
+							// get token
 							clientset, err := newClientset(cres.Cluster, sess)
 							if err != nil {
 								return errors.Wrapf(err, "new clientset for %s", cluster)
@@ -3063,38 +3070,46 @@ func main() {
 									break
 								}
 							}
-
 							bytes, ok := s.Data["token"]
 							if !ok {
 								return fmt.Errorf("eks-admin-token not found")
 							}
-
 							fmt.Printf("token: %s\n\n", string(bytes))
 
-							var cmd *exec.Cmd
+							// update config
+							var uccmd *exec.Cmd
 							if profile != "" {
-								cmd = exec.Command("aws", "eks", "update-kubeconfig", "--name", cluster, "--kubeconfig", kubeconfig, "--profile", profile)
+								uccmd = exec.Command("aws", "eks", "update-kubeconfig", "--name", cluster, "--kubeconfig", kubeconfig, "--profile", profile)
 							} else {
-								cmd = exec.Command("aws", "eks", "update-kubeconfig", "--name", cluster, "--kubeconfig", kubeconfig)
+								uccmd = exec.Command("aws", "eks", "update-kubeconfig", "--name", cluster, "--kubeconfig", kubeconfig)
 							}
-							fmt.Printf("running command: %s\n", cmd.String())
-							if err := cmd.Run(); err != nil {
-								return errors.Wrapf(err, "update-kubeconfig")
-							}
-
-							rpcmd := exec.Command("kubectl", "proxy")
-							fmt.Printf("running command: %s\n", rpcmd.String())
-							ocmd := exec.Command("open", "url")
-							if err := ocmd.Run(); err != nil {
-								url := "http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/#!/login"
-								fmt.Printf("open in browser (use token from above to authenticate): \n%s\n", url)
+							fmt.Printf("running: %s\n", uccmd.String())
+							if err := uccmd.Run(); err != nil {
+								return errors.Wrapf(err, uccmd.String())
 							}
 
-							if err := rpcmd.Run(); err != nil {
-								return errors.Wrapf(err, "kubectl proxy")
+							// open in browser
+							purl, err := url.Parse("http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/#!/login")
+							if err != nil {
+								return errors.Wrapf(err, "url parse")
+							}
+							ocmd := exec.Command("open", purl.String())
+							fmt.Printf("running: %s\n", ocmd.String())
+							if err := ocmd.Start(); err != nil {
+								fmt.Printf("%v\n", errors.Wrapf(err, ocmd.String()))
+								fmt.Printf("open in browser (use token from above to authenticate): \n%s\n", purl.String())
 							}
 
-							return err
+							// start proxy
+							kpcmd := exec.Command("kubectl", "proxy", "--kubeconfig", kubeconfig)
+							fmt.Printf("running: %s\n", kpcmd.String())
+							output, err := kpcmd.CombinedOutput()
+							if err != nil {
+								fmt.Printf("%v\n", string(output))
+								return errors.Wrapf(err, kpcmd.String())
+							}
+
+							return nil
 						},
 					},
 				},
