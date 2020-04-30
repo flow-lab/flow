@@ -22,17 +22,9 @@ NOTE: Flow CLI is under development, and may occasionally make backwards-incompa
 * latest version from github releases
 
     ```sh
-    curl https://raw.githubusercontent.com/flow-lab/flow/master/bin/get-flow.sh --output get-latest.sh
-    chmod +x get-latest.sh
-    ./get-latest.sh
-    ```
-    
-* local with go get
-
-    ```sh
-    go get -u github.com/flow-lab/flow
-    cd $GOPATH/src/github.com/flow-lab/flow
-    go install ./...
+    curl https://raw.githubusercontent.com/flow-lab/flow/master/bin/get-flow.sh --output get-flow.sh
+    chmod +x get-flow.sh
+    ./get-flow.sh
     ```
 
 ## example usage:
