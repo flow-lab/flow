@@ -950,8 +950,8 @@ func main() {
 						Usage: "purge all messages",
 						Flags: []cli.Flag{
 							&cli.StringFlag{
-								Name:  "queue-name",
-								Value: "",
+								Name:     "queue-name",
+								Required: true,
 							},
 							&cli.StringFlag{
 								Name:  "profile",
@@ -992,8 +992,8 @@ func main() {
 						Usage: "send message to sqs",
 						Flags: []cli.Flag{
 							&cli.StringFlag{
-								Name:  "queue-name",
-								Value: "",
+								Name:     "queue-name",
+								Required: true,
 							},
 							&cli.StringFlag{
 								Name: "input-file-name",
@@ -1148,6 +1148,12 @@ func main() {
 							&cli.Int64Flag{
 								Name:  "max-number-of-messages",
 								Value: 10,
+								Usage: "max number of messages in one receive query",
+							},
+							&cli.IntFlag{
+								Name:  "duration",
+								Value: 5,
+								Usage: "poll duration in seconds",
 							},
 							&cli.StringFlag{
 								Name:  "profile",
@@ -1157,6 +1163,7 @@ func main() {
 						Action: func(c *cli.Context) error {
 							profile := c.String("profile")
 							queueName := c.String("queue-name")
+							duration := c.Int("duration")
 							maxNumberOfMessages := c.Int64("max-number-of-messages")
 							sess := session.NewSessionWithSharedProfile(profile)
 
@@ -1168,21 +1175,50 @@ func main() {
 								return err
 							}
 
-							for _, elem := range resp.QueueUrls {
-								if strings.Contains(*elem, queueName) {
+							var queueUrl *string
+							for _, q := range resp.QueueUrls {
+								if strings.Contains(*q, queueName) {
+									queueUrl = q
+								}
+							}
+
+							if queueUrl == nil {
+								return errors.New("unable to find queue")
+							}
+
+							ctx, cancelFunc := context.WithTimeout(context.Background(), time.Duration(duration)*time.Second)
+							defer cancelFunc()
+
+							go func() {
+								for {
 									params := sqs.ReceiveMessageInput{
-										QueueUrl:            elem,
+										QueueUrl:            queueUrl,
 										MaxNumberOfMessages: aws.Int64(maxNumberOfMessages),
 										AttributeNames:      []*string{aws.String("All")},
+										WaitTimeSeconds:     aws.Int64(20),
 									}
 									resp, err := sqsc.ReceiveMessage(&params)
 									if err != nil {
-										return err
+										fmt.Println(errors.Wrapf(err, "receive message"))
 									}
 									for _, msg := range resp.Messages {
-										fmt.Printf("%v\n", msg)
+										json, err := json.Marshal(&msg)
+										if err != nil {
+											fmt.Println(errors.Wrapf(err, "marshal"))
+										}
+										fmt.Printf("%s", string(json))
+									}
+
+									select {
+									case <-ctx.Done():
+										return
+									default:
 									}
 								}
+							}()
+
+							select {
+							case <-ctx.Done():
 							}
 
 							return nil
@@ -2956,12 +2992,10 @@ func main() {
 							&cli.TimestampFlag{
 								Name:   "start-time",
 								Layout: time.RFC3339,
-								Value:  cli.NewTimestamp(time.Now().Add(-1 * time.Hour)),
 							},
 							&cli.TimestampFlag{
 								Name:   "end-time",
 								Layout: time.RFC3339,
-								Value:  cli.NewTimestamp(time.Now()),
 							},
 							&cli.StringFlag{
 								Name: "profile",
@@ -2975,17 +3009,33 @@ func main() {
 							sess := session.NewSessionWithSharedProfile(profile)
 							ctc := cloudtrail.New(sess)
 
+							if startTime == nil {
+								t := time.Now().Add(-1 * time.Hour)
+								startTime = &t
+							}
+
+							if endTime == nil {
+								t := time.Now()
+								endTime = &t
+							}
+
+							fmt.Printf("using startTime %s and endTime %s\n", startTime.UTC().String(), endTime.UTC().String())
 							r := cloudtrail.LookupEventsInput{
 								EndTime:   endTime,
 								StartTime: startTime,
 							}
 							var events []*cloudtrail.Event
 							defer func() {
-								str, err := json.Marshal(events)
-								if err != nil {
-									panic(err)
+								if len(events) != 0 {
+									str, err := json.Marshal(events)
+									if err != nil {
+										panic(err)
+									}
+									fmt.Printf("%s", string(str))
+									return
 								}
-								fmt.Print(string(str))
+
+								fmt.Println("not found")
 							}()
 							err := ctc.LookupEventsPagesWithContext(context.Background(), &r, func(o *cloudtrail.LookupEventsOutput, b bool) bool {
 								for _, event := range o.Events {
@@ -3001,7 +3051,10 @@ func main() {
 								}
 								return b == true
 							})
-							return err
+							if err != nil {
+								return errors.Wrapf(err, "lookup events")
+							}
+							return nil
 						},
 					},
 				},
