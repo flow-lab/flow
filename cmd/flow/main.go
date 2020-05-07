@@ -3083,10 +3083,16 @@ func main() {
 							&cli.StringFlag{
 								Name: "profile",
 							},
+							&cli.BoolFlag{
+								Name:  "token",
+								Usage: "Set to true if token should be printed out.",
+								Value: false,
+							},
 						},
 						Action: func(c *cli.Context) error {
 							profile := c.String("profile")
 							cluster := c.String("cluster")
+							token := c.Bool("token")
 							kubeconfig, err := filepath.Abs(c.String("kubeconfig"))
 							if err != nil {
 								return errors.Wrapf(err, "abs kubeconfig path")
@@ -3127,7 +3133,10 @@ func main() {
 							if !ok {
 								return fmt.Errorf("eks-admin-token not found")
 							}
-							fmt.Printf("token: %s\n\n", string(bytes))
+
+							if token {
+								fmt.Printf("token: %s\n\n", string(bytes))
+							}
 
 							// update config
 							var uccmd *exec.Cmd
