@@ -46,7 +46,8 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
-	"path/filepath"
+	"os/user"
+	"path"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 	"strconv"
 	"strings"
@@ -3093,11 +3094,16 @@ func main() {
 							profile := c.String("profile")
 							cluster := c.String("cluster")
 							token := c.Bool("token")
-							kubeconfig, err := filepath.Abs(c.String("kubeconfig"))
-							if err != nil {
-								return errors.Wrapf(err, "abs kubeconfig path")
+							kubeconfig := c.String("kubeconfig")
+							if strings.Contains(kubeconfig, "~") {
+								current, err := user.Current()
+								if err != nil {
+									return errors.Wrapf(err, "get current user")
+								}
+								kubeconfig = strings.ReplaceAll(kubeconfig, "~", current.HomeDir)
+								fmt.Println(path.Join(current.HomeDir, kubeconfig))
 							}
-							kubeconfig = filepath.Clean(kubeconfig)
+
 							sess := session.NewSessionWithSharedProfile(profile)
 
 							fmt.Printf("using kubeconfig=%s\n", kubeconfig)
