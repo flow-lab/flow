@@ -161,7 +161,7 @@ NOTE: Flow CLI is under development, and may occasionally make backwards-incompa
 
 * assume _my-role_ in _111111111111_ account and generate intellij friendly env variables
 
-    `flow sts assume-role --role-arn "arn:aws:iam::111111111111:role/service-role/my-role"`
+    `flow sts assume-role --role-arn "arn:aws:iam::111111111111:role/service-role/my-role" --serial-number "arn:aws:iam::123456789:mfa/terraform" --token-code "123456"`
     output:
     ```
     AWS_REGION=eu-west-1
@@ -169,6 +169,18 @@ NOTE: Flow CLI is under development, and may occasionally make backwards-incompa
     AWS_SECRET_ACCESS_KEY=1..F
     AWS_SESSION_TOKEN=F..g
     ```
+  
+* unset envs from assume role
+
+    `flow sts assume-role-clean`
+    output:
+    ```
+    unset AWS_REGION
+    unset AWS_ACCESS_KEY_ID
+    unset AWS_SECRET_ACCESS_KEY
+    unset AWS_SESSION_TOKEN
+    ```
+  
 ### cloudtrail
 
 * find all cloud trail events containing "unauthorized" or "forbidden" between 2020-03-12T17:00:00Z and 2020-03-12T20:00:00Z

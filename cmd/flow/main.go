@@ -2771,7 +2771,7 @@ func main() {
 				Subcommands: []*cli.Command{
 					{
 						Name:  "assume-role",
-						Usage: "",
+						Usage: "Returns a set of temporary security credentials for a given role.",
 						Flags: []cli.Flag{
 							&cli.StringFlag{
 								Name: "profile",
@@ -2783,7 +2783,23 @@ func main() {
 							},
 							&cli.StringFlag{
 								Name:    "region",
-								EnvVars: []string{"AWS_DEFAULT_REGION"},
+								EnvVars: []string{"AWS_DEFAULT_REGION", "AWS_REGION"},
+							},
+							&cli.StringFlag{
+								Name:     "serial-number",
+								Required: false,
+								Usage:    "MFA serial number ARN",
+							},
+							&cli.StringFlag{
+								Name:     "token-code",
+								Required: false,
+								Usage:    "MFA token code",
+							},
+							&cli.StringFlag{
+								Name:     "role-session-name",
+								Required: false,
+								Usage:    "Name of the session",
+								Value:    "flow",
 							},
 							&cli.Int64Flag{
 								Name:  "duration-seconds",
@@ -2793,14 +2809,17 @@ func main() {
 						Action: func(c *cli.Context) error {
 							profile := c.String("profile")
 							roleArn := c.String("role-arn")
+							serialNr := c.String("serial-number")
+							tokenCode := c.String("token-code")
+							roleSessName := c.String("role-session-name")
 							region := c.String("region")
 							durationSeconds := c.Int64("duration-seconds")
 							sess := session.NewSessionWithSharedProfile(profile)
 							client := sts.New(sess)
 
-							err, cred := flowsts.AssumeRole(context.Background(), client, durationSeconds, "flow", roleArn)
+							err, cred := flowsts.AssumeRole(context.Background(), client, durationSeconds, roleSessName, roleArn, serialNr, tokenCode)
 							if err != nil {
-								return err
+								return errors.Wrapf(err, "assume role")
 							}
 
 							err, s := creds.GenerateEnv(region, *cred.AccessKeyId, *cred.SecretAccessKey, *cred.SessionToken)
@@ -2809,6 +2828,31 @@ func main() {
 							}
 
 							fmt.Println(s)
+
+							return nil
+						},
+					},
+					{
+						Name:  "assume-role-clean",
+						Usage: "Cleans environment variables",
+						Aliases: []string{
+							"arc",
+						},
+						Flags: []cli.Flag{},
+						Action: func(c *cli.Context) error {
+							envs := []string{
+								"AWS_REGION",
+								"AWS_ACCESS_KEY_ID",
+								"AWS_SECRET_ACCESS_KEY",
+								"AWS_SESSION_TOKEN",
+							}
+							for _, env := range envs {
+								err := os.Unsetenv(env)
+								if err != nil {
+									return errors.Wrapf(err, "unsetenv")
+								}
+								fmt.Printf("unset %s\n", env)
+							}
 
 							return nil
 						},
