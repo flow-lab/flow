@@ -30,3 +30,25 @@ func AssumeRole(ctx context.Context, stsapi stsiface.STSAPI, durationSeconds int
 
 	return nil, res.Credentials
 }
+
+// GetSessionToken in aws account and return credentials
+func GetSessionToken(ctx context.Context, stsapi stsiface.STSAPI, durationSeconds int64, serialNr string, tokenCode string) (error, *sts.Credentials) {
+	input := sts.GetSessionTokenInput{
+		DurationSeconds: aws.Int64(durationSeconds),
+	}
+
+	if serialNr != "" {
+		input.SerialNumber = aws.String(serialNr)
+	}
+
+	if tokenCode != "" {
+		input.TokenCode = aws.String(tokenCode)
+	}
+
+	res, err := stsapi.GetSessionTokenWithContext(ctx, &input)
+	if err != nil {
+		return err, nil
+	}
+
+	return nil, res.Credentials
+}

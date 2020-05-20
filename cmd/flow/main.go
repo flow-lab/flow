@@ -2772,6 +2772,9 @@ func main() {
 					{
 						Name:  "assume-role",
 						Usage: "Returns a set of temporary security credentials for a given role.",
+						Aliases: []string{
+							"ar",
+						},
 						Flags: []cli.Flag{
 							&cli.StringFlag{
 								Name: "profile",
@@ -2789,11 +2792,13 @@ func main() {
 								Name:     "serial-number",
 								Required: false,
 								Usage:    "MFA serial number ARN",
+								EnvVars:  []string{"AWS_MFA_SERIAL_NUMBER"},
 							},
 							&cli.StringFlag{
 								Name:     "token-code",
 								Required: false,
 								Usage:    "MFA token code",
+								EnvVars:  []string{"AWS_TOKEN_CODE"},
 							},
 							&cli.StringFlag{
 								Name:     "role-session-name",
@@ -2833,10 +2838,65 @@ func main() {
 						},
 					},
 					{
-						Name:  "assume-role-clean",
+						Name:  "get-session-token",
+						Usage: "Returns a set of temporary security credentials.",
+						Aliases: []string{
+							"gst",
+						},
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name: "profile",
+							},
+							&cli.StringFlag{
+								Name:    "region",
+								EnvVars: []string{"AWS_DEFAULT_REGION", "AWS_REGION"},
+							},
+							&cli.StringFlag{
+								Name:     "serial-number",
+								Required: false,
+								Usage:    "MFA serial number ARN",
+								EnvVars:  []string{"AWS_MFA_SERIAL_NUMBER"},
+							},
+							&cli.StringFlag{
+								Name:     "token-code",
+								Required: false,
+								Usage:    "MFA token code",
+								EnvVars:  []string{"AWS_TOKEN_CODE"},
+							},
+							&cli.Int64Flag{
+								Name:  "duration-seconds",
+								Value: 3600,
+							},
+						},
+						Action: func(c *cli.Context) error {
+							profile := c.String("profile")
+							serialNr := c.String("serial-number")
+							tokenCode := c.String("token-code")
+							region := c.String("region")
+							durationSeconds := c.Int64("duration-seconds")
+							sess := session.NewSessionWithSharedProfile(profile)
+							client := sts.New(sess)
+
+							err, cred := flowsts.GetSessionToken(context.Background(), client, durationSeconds, serialNr, tokenCode)
+							if err != nil {
+								return errors.Wrapf(err, "get session token")
+							}
+
+							err, s := creds.GenerateEnv(region, *cred.AccessKeyId, *cred.SecretAccessKey, *cred.SessionToken)
+							if err != nil {
+								return err
+							}
+
+							fmt.Println(s)
+
+							return nil
+						},
+					},
+					{
+						Name:  "clean",
 						Usage: "Cleans environment variables",
 						Aliases: []string{
-							"arc",
+							"c",
 						},
 						Flags: []cli.Flag{},
 						Action: func(c *cli.Context) error {
@@ -2845,6 +2905,7 @@ func main() {
 								"AWS_ACCESS_KEY_ID",
 								"AWS_SECRET_ACCESS_KEY",
 								"AWS_SESSION_TOKEN",
+								"AWS_TOKEN_CODE",
 							}
 							for _, env := range envs {
 								err := os.Unsetenv(env)

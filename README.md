@@ -170,9 +170,20 @@ NOTE: Flow CLI is under development, and may occasionally make backwards-incompa
     AWS_SESSION_TOKEN=F..g
     ```
   
-* unset envs from assume role
+* get session token
 
-    `flow sts assume-role-clean`
+    `flow sts get-session-token --serial-number "arn:aws:iam::123456789:mfa/terraform" --token-code "123456"`
+    output:
+    ```
+    AWS_REGION=eu-west-1
+    AWS_ACCESS_KEY_ID=A..B
+    AWS_SECRET_ACCESS_KEY=1..F
+    AWS_SESSION_TOKEN=F..g
+    ```
+  
+* unset envs
+
+    `flow sts clean`
     output:
     ```
     unset AWS_REGION
