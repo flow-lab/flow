@@ -10,6 +10,7 @@ require (
 	github.com/dgryski/go-gk v0.0.0-20140819190930-201884a44051 // indirect
 	github.com/golang/mock v1.4.3
 	github.com/golang/protobuf v1.4.0 // indirect
+	github.com/google/go-github/v32 v32.1.0
 	github.com/influxdata/tdigest v0.0.1 // indirect
 	github.com/klauspost/compress v1.10.4 // indirect
 	github.com/mailru/easyjson v0.7.1 // indirect
@@ -22,6 +23,7 @@ require (
 	github.com/urfave/cli/v2 v2.2.0
 	golang.org/x/crypto v0.0.0-20200414173820-0848c9571904 // indirect
 	golang.org/x/exp v0.0.0-20200228211341-fcea875c7e85 // indirect
+	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sys v0.0.0-20200413165638-669c56c373c4 // indirect
 	golang.org/x/tools v0.0.0-20200417140056-c07e33ef3290 // indirect
 	gonum.org/v1/gonum v0.0.0-20190929233944-b20cf7805fc4 // indirect

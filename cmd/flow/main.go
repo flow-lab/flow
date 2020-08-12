@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -34,8 +35,10 @@ import (
 	"github.com/flow-lab/flow/internal/session"
 	flowsqs "github.com/flow-lab/flow/internal/sqs"
 	flowsts "github.com/flow-lab/flow/internal/sts"
+	"github.com/google/go-github/v32/github"
 	"github.com/pkg/errors"
 	vegeta "github.com/tsenart/vegeta/lib"
+	"golang.org/x/oauth2"
 	"io/ioutil"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,6 +55,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"text/template"
 	"time"
 
 	"github.com/urfave/cli/v2"
@@ -3288,6 +3292,92 @@ func main() {
 				},
 			}
 		}(),
+		func() *cli.Command {
+			return &cli.Command{
+				Name:  "github",
+				Usage: "GitHub helpers",
+				Subcommands: []*cli.Command{
+					{
+						Name:  "get-tag",
+						Usage: "Get tag for given sha",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:     "sha",
+								Required: true,
+							},
+							&cli.StringFlag{
+								Name:     "owner",
+								Required: true,
+							},
+							&cli.StringFlag{
+								Name:     "repo",
+								Required: true,
+							},
+							&cli.StringFlag{
+								Name:     "token",
+								Required: true,
+								Usage:    "GitHub access token.",
+								EnvVars:  []string{"GITHUB_ACCESS_TOKEN"},
+							},
+						},
+						Action: func(c *cli.Context) error {
+							sha := c.String("sha")
+							repo := c.String("repo")
+							org := c.String("owner")
+							ghToken := c.String("token")
+							ctx := context.Background()
+
+							client := NewGitHubClient(org, ghToken)
+
+							page := 0
+							tagName := ""
+
+							for true {
+								tags, _, err := client.Repositories.ListTags(ctx, org, repo, &github.ListOptions{
+									Page: page,
+								})
+								page++
+								if err != nil {
+									return errors.Wrap(err, "list tags")
+								}
+								if len(tags) == 0 {
+									break
+								}
+
+								for _, tag := range tags {
+									if tag.Commit.GetSHA() == sha {
+										tagName = *tag.Name
+									}
+								}
+							}
+
+							const envTemplate = "GITHUB_SHA={{.SHA}}\nGITHUB_TAG={{.Tag}}"
+
+							t, err := template.New("env").Parse(envTemplate)
+							if err != nil {
+								return errors.Wrap(err, "new env template")
+							}
+							var b bytes.Buffer
+							err = t.ExecuteTemplate(&b, "env", struct {
+								SHA string
+								Tag string
+							}{
+								SHA: sha,
+								Tag: tagName,
+							})
+
+							if err != nil {
+								return errors.Wrap(err, "env template")
+							}
+
+							fmt.Print(b.String())
+
+							return nil
+						},
+					},
+				},
+			}
+		}(),
 	}
 
 	app.Action = func(c *cli.Context) error {
@@ -3329,4 +3419,20 @@ func newClientset(cluster *eks.Cluster, sess *asession.Session) (*kubernetes.Cli
 			},
 		},
 	)
+}
+
+func NewGitHubClient(org string, accessToken string) *github.Client {
+	if org == "" {
+		panic("org is required")
+	}
+	if accessToken == "" {
+		panic("accessToken is required")
+	}
+	ctx := context.Background()
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: accessToken},
+	)
+	tc := oauth2.NewClient(ctx, ts)
+
+	return github.NewClient(tc)
 }
