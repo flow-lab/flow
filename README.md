@@ -254,6 +254,14 @@ This commands are designed to use with [Flow Pub/Sub emulator](https://github.co
      --duration "180s" \
      --authorization "Bearer TOKEN"
      ```
+  
+### github
+    
+* get tag for GitHub SHA
+
+    ```sh
+    flow github get-tag --owner flow-lab --repo auxospore --sha d3d8a8803f6ecb4b091667ba61b9945da7af3cf2
+    ```
 
 help:
 ```sh
