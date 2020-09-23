@@ -49,6 +49,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"os/signal"
 	"os/user"
 	"path"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
@@ -2579,7 +2580,67 @@ func main() {
 							fk := flowkafka.NewFlowKafka(&flowkafka.ServiceConfig{
 								BootstrapBroker: *bb,
 							})
-							return fk.Produce(topic, []byte(msg))
+							return fk.Produce(c.Context, topic, flowkafka.Message{Value: []byte(msg)})
+						},
+					},
+					{
+						Name:        "pipe",
+						Description: "read topic and send to other topic",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:     "src-bootstrap-broker",
+								Usage:    "source bootstrap broker, eg. localhost:9092",
+								Aliases:  []string{"sbb"},
+								Value:    "localhost:9092",
+							},
+							&cli.StringFlag{
+								Name:     "src-topic",
+								Usage:    "source topic name",
+								Required: true,
+								Aliases:  []string{"st"},
+							},
+							&cli.StringFlag{
+								Name:     "dst-bootstrap-broker",
+								Usage:    "destination bootstrap broker, eg. localhost:9092",
+								Aliases:  []string{"dbb"},
+								Value:    "localhost:9092",
+							},
+							&cli.StringFlag{
+								Name:     "dst-topic",
+								Usage:    "destination topic name",
+								Required: true,
+								Aliases:  []string{"dt"},
+							},
+						},
+						Action: func(c *cli.Context) error {
+							sbb := c.String("src-bootstrap-broker")
+							st := c.String("src-topic")
+
+							dbb := c.String("dst-bootstrap-broker")
+							dt := c.String("dst-topic")
+
+							sfk := flowkafka.NewFlowKafka(&flowkafka.ServiceConfig{BootstrapBroker: sbb})
+							dfk := flowkafka.NewFlowKafka(&flowkafka.ServiceConfig{BootstrapBroker: dbb})
+
+							signals := make(chan os.Signal, 1)
+							signal.Notify(signals, os.Interrupt)
+
+							cCtx, cancelFunc := context.WithCancel(c.Context)
+							rc := sfk.Read(cCtx, st, 10000)
+
+							for {
+								select {
+								case msg := <-rc:
+									err := dfk.Produce(cCtx, dt, msg)
+									if err != nil {
+										return errors.Wrap(err, "produce msg")
+									}
+								case <-signals:
+									cancelFunc()
+								case <-cCtx.Done():
+									return errors.New("context canceled")
+								}
+							}
 						},
 					},
 					{

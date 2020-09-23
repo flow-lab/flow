@@ -1,6 +1,7 @@
 package kafka
 
 import (
+	"context"
 	"github.com/Shopify/sarama"
 	smocks "github.com/Shopify/sarama/mocks"
 	mocks2 "github.com/flow-lab/flow/internal/mocks"
@@ -27,16 +28,16 @@ func TestSaramaService_Produce(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	ca := mocks2.NewMockClusterAdmin(ctrl)
-	syncProdMock := smocks.NewSyncProducer(t, nil)
-	syncProdMock.ExpectSendMessageAndSucceed()
+	producer := smocks.NewAsyncProducer(t, nil)
+	producer.ExpectInputAndSucceed()
 	s := NewFlowKafka(&ServiceConfig{
-		producer:        syncProdMock,
+		producer:        producer,
 		BootstrapBroker: "localhost:9092",
 		clusterAdmin:    ca,
 	})
 	assert.NotNil(t, s)
 
-	err := s.Produce("test-topic", []byte("test msg"))
+	err := s.Produce(context.Background(), "test-topic", Message{Value: []byte("test msg")})
 
 	assert.Nil(t, err)
 }

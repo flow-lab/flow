@@ -1,6 +1,7 @@
 package kafka
 
 import (
+	"context"
 	"fmt"
 	"github.com/Shopify/sarama"
 )
@@ -29,7 +30,7 @@ type Metadata struct {
 type config struct {
 	saramaConfig    *sarama.Config
 	bootstrapBroker string
-	producer        sarama.SyncProducer
+	producer        sarama.AsyncProducer
 }
 
 // FlowKafka is an interface representing operations that can be executed with Kafka Cluster.
@@ -37,12 +38,13 @@ type FlowKafka interface {
 	CreateTopic(topic string, numPartitions int, replicationFactor int, retentionMs string) error
 	DeleteTopic(topic string) error
 	DescribeTopic(topic string) (*Topic, error)
-	Produce(topic string, msg []byte) error
+	Produce(ctx context.Context, topic string, msg Message) error
+	Read(ctx context.Context, topic string, bufferSize int) <-chan Message
 }
 
 type ServiceConfig struct {
 	BootstrapBroker string
-	producer        sarama.SyncProducer
+	producer        sarama.AsyncProducer
 	clusterAdmin    sarama.ClusterAdmin
 }
 
@@ -89,9 +91,9 @@ type saramaService struct {
 	sarama.ClusterAdmin
 }
 
-func (ss *saramaService) Produce(topic string, msg []byte) error {
+func (ss *saramaService) Produce(ctx context.Context, topic string, msg Message) error {
 	if ss.producer == nil {
-		producer, err := sarama.NewSyncProducer([]string{ss.bootstrapBroker}, ss.saramaConfig)
+		producer, err := sarama.NewAsyncProducer([]string{ss.bootstrapBroker}, ss.saramaConfig)
 		if err != nil {
 			panic(err)
 		}
@@ -99,16 +101,24 @@ func (ss *saramaService) Produce(topic string, msg []byte) error {
 		ss.producer = producer
 	}
 
-	pmsg := &sarama.ProducerMessage{
+	pmsg := sarama.ProducerMessage{
 		Topic: topic,
-		Value: sarama.ByteEncoder(msg),
+		Key:   sarama.ByteEncoder(msg.Key),
+		Value: sarama.ByteEncoder(msg.Value),
 	}
-	partitionNr, offset, err := ss.producer.SendMessage(pmsg)
-	if err != nil {
-		return err
+	select {
+	case ss.producer.Input() <- &pmsg:
+	case msg := <-ss.producer.Successes():
+		fmt.Printf("ack message/(%s)/(%s)/%d/%d\n", msg.Key, msg.Value, msg.Partition, msg.Offset)
+	case e := <-ss.producer.Errors():
+		fmt.Printf("error when sending(%s)\n", e.Error())
+	case <-ctx.Done():
+		err := ss.producer.Close()
+		if err != nil {
+			return err
+		}
 	}
 
-	fmt.Printf("message sent to topic(%s)/partition(%d)/offset(%d)\n", topic, partitionNr, offset)
 	return nil
 }
 
@@ -150,4 +160,60 @@ func (ss *saramaService) DescribeTopic(topic string) (*Topic, error) {
 		Configs: c,
 	}
 	return &t, nil
+}
+
+type Message struct {
+	Key, Value []byte
+}
+
+func (ss *saramaService) Read(ctx context.Context, topic string, bufferSize int) <-chan Message {
+	result := make(chan Message, bufferSize)
+	go func(result chan<- Message) {
+		defer close(result)
+		// in case ctx is done cancel
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		consumer, err := sarama.NewConsumer([]string{ss.bootstrapBroker}, ss.saramaConfig)
+		if err != nil {
+			panic(err)
+		}
+
+		p, err := consumer.Partitions(topic)
+		if err != nil {
+			panic(err)
+		}
+
+		for _, i := range p {
+			partition, err := consumer.ConsumePartition(topic, i, 0)
+			if err != nil {
+				panic(err)
+			}
+
+			// in case context is already done
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+
+			for {
+				select {
+				case msg := <-partition.Messages():
+					fmt.Printf("received message/(%s)/(%s)/%d/%d\n", string(msg.Key), string(msg.Value), msg.Partition, msg.Offset)
+					result <- Message{
+						Key:   msg.Key,
+						Value: msg.Value,
+					}
+				case <-ctx.Done():
+					return
+				}
+			}
+		}
+	}(result)
+
+	return result
 }

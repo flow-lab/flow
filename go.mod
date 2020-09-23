@@ -8,7 +8,7 @@ require (
 	github.com/bmizerany/perks v0.0.0-20141205001514-d9a9656a3a4b // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
 	github.com/dgryski/go-gk v0.0.0-20140819190930-201884a44051 // indirect
-	github.com/golang/mock v1.4.3
+	github.com/golang/mock v1.4.4
 	github.com/golang/protobuf v1.4.0 // indirect
 	github.com/google/go-github/v32 v32.1.0
 	github.com/influxdata/tdigest v0.0.1 // indirect
