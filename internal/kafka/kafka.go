@@ -45,6 +45,7 @@ type FlowKafka interface {
 	CreateTopic(topic string, numPartitions int, replicationFactor int, retentionMs string) error
 	DeleteTopic(topic string) error
 	DescribeTopic(topic string) (*Topic, error)
+	Pipe(ctx context.Context, c <-chan Message, topic string) error
 	Produce(ctx context.Context, topic string, msg Message) error
 	Read(ctx context.Context, topic string, bufferSize int) <-chan Message
 	BrokerInfo(ctx context.Context) ([]Broker, error)
@@ -62,12 +63,13 @@ func NewFlowKafka(c *ServiceConfig) FlowKafka {
 		panic("bootstrapBrokers is required")
 	}
 
-	kv := sarama.V2_3_0_0
+	kv := sarama.V2_4_0_0
 
 	sConfig := sarama.NewConfig()
 	sConfig.Version = kv
 	sConfig.Producer.RequiredAcks = sarama.WaitForAll
 	sConfig.Producer.Return.Successes = true
+	sConfig.Producer.Return.Errors = true
 
 	ser := &saramaService{
 		config: config{
@@ -114,18 +116,57 @@ func (ss *saramaService) Produce(ctx context.Context, topic string, msg Message)
 		Key:   sarama.ByteEncoder(msg.Key),
 		Value: sarama.ByteEncoder(msg.Value),
 	}
-	select {
-	case ss.producer.Input() <- &pmsg:
-	case msg := <-ss.producer.Successes():
-		fmt.Printf("ack message/(%s)/(%s)/%d/%d\n", msg.Key, msg.Value, msg.Partition, msg.Offset)
-	case e := <-ss.producer.Errors():
-		fmt.Printf("error when sending(%s)\n", e.Error())
-	case <-ctx.Done():
-		err := ss.producer.Close()
-		if err != nil {
-			return err
+
+	for {
+		select {
+		case ss.producer.Input() <- &pmsg:
+		case msg := <-ss.producer.Successes():
+			fmt.Printf("ack message/(%s)/(%s)/%d/%d\n", msg.Key, msg.Value, msg.Partition, msg.Offset)
+			return nil
+		case e := <-ss.producer.Errors():
+			fmt.Printf("error when sending(%s)\n", e.Error())
+			return errors.Wrapf(e, "producer err")
+		case <-ctx.Done():
+			err := ss.producer.Close()
+			if err != nil {
+				return err
+			}
 		}
 	}
+
+	return nil
+}
+
+func (ss *saramaService) Pipe(ctx context.Context, c <-chan Message, topic string) error {
+	if ss.producer == nil {
+		producer, err := sarama.NewAsyncProducer([]string{ss.bootstrapBroker}, ss.saramaConfig)
+		if err != nil {
+			panic(err)
+		}
+
+		ss.producer = producer
+	}
+
+	go func() {
+		defer ss.producer.AsyncClose()
+		for {
+			select {
+			case msg := <-c:
+				pmsg := sarama.ProducerMessage{
+					Topic: topic,
+					Key:   sarama.ByteEncoder(msg.Key),
+					Value: sarama.ByteEncoder(msg.Value),
+				}
+				ss.producer.Input() <- &pmsg
+			case msg := <-ss.producer.Successes():
+				fmt.Printf("ack message/(%s)/%d/%d\n", msg.Key, msg.Partition, msg.Offset)
+			case err := <-ss.producer.Errors():
+				fmt.Printf("error when sending(%s)\n", err.Error())
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 
 	return nil
 }
@@ -211,14 +252,11 @@ func (ss *saramaService) Read(ctx context.Context, topic string, bufferSize int)
 			consumers[i] = c
 		}
 
-		fmt.Printf("got %d\n", len(partitions))
-
 		for _, c := range consumers {
 			go func(pc sarama.PartitionConsumer) {
 				for {
 					select {
 					case msg := <-pc.Messages():
-						fmt.Printf("received message/(%s)/(%s)/%d/%d\n", string(msg.Key), string(msg.Value), msg.Partition, msg.Offset)
 						result <- Message{
 							Key:   msg.Key,
 							Value: msg.Value,

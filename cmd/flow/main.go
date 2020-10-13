@@ -2585,7 +2585,7 @@ func main() {
 					},
 					{
 						Name:        "pipe",
-						Description: "read topic and send to other topic",
+						Description: "pipe records from source topic to destination topic",
 						Flags: []cli.Flag{
 							&cli.StringFlag{
 								Name:    "src-bootstrap-broker",
@@ -2623,22 +2623,22 @@ func main() {
 							dfk := flowkafka.NewFlowKafka(&flowkafka.ServiceConfig{BootstrapBroker: dbb})
 
 							signals := make(chan os.Signal, 1)
-							signal.Notify(signals, os.Interrupt)
+							signal.Notify(signals, os.Interrupt, os.Kill)
 
 							cCtx, cancelFunc := context.WithCancel(c.Context)
+							defer cancelFunc()
 							rc := sfk.Read(cCtx, st, 10000)
+							err := dfk.Pipe(cCtx, rc, dt)
+							if err != nil {
+								return errors.Wrapf(err, "produce")
+							}
 
 							for {
 								select {
-								case msg := <-rc:
-									err := dfk.Produce(cCtx, dt, msg)
-									if err != nil {
-										return errors.Wrap(err, "produce msg")
-									}
 								case <-signals:
 									cancelFunc()
 								case <-cCtx.Done():
-									return errors.New("context canceled")
+									return nil
 								}
 							}
 						},
