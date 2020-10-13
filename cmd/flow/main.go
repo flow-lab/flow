@@ -2588,10 +2588,10 @@ func main() {
 						Description: "read topic and send to other topic",
 						Flags: []cli.Flag{
 							&cli.StringFlag{
-								Name:     "src-bootstrap-broker",
-								Usage:    "source bootstrap broker, eg. localhost:9092",
-								Aliases:  []string{"sbb"},
-								Value:    "localhost:9092",
+								Name:    "src-bootstrap-broker",
+								Usage:   "source bootstrap broker, eg. localhost:9092",
+								Aliases: []string{"sbb"},
+								Value:   "localhost:9092",
 							},
 							&cli.StringFlag{
 								Name:     "src-topic",
@@ -2600,10 +2600,10 @@ func main() {
 								Aliases:  []string{"st"},
 							},
 							&cli.StringFlag{
-								Name:     "dst-bootstrap-broker",
-								Usage:    "destination bootstrap broker, eg. localhost:9092",
-								Aliases:  []string{"dbb"},
-								Value:    "localhost:9092",
+								Name:    "dst-bootstrap-broker",
+								Usage:   "destination bootstrap broker, eg. localhost:9092",
+								Aliases: []string{"dbb"},
+								Value:   "localhost:9092",
 							},
 							&cli.StringFlag{
 								Name:     "dst-topic",
@@ -2641,6 +2641,33 @@ func main() {
 									return errors.New("context canceled")
 								}
 							}
+						},
+					},
+					{
+						Name:        "broker-info",
+						Description: "get broker info",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:    "bootstrap-broker",
+								Usage:   "source bootstrap broker, eg. localhost:9092",
+								Aliases: []string{"bb"},
+								Value:   "localhost:9092",
+							},
+						},
+						Action: func(c *cli.Context) error {
+							sbb := c.String("bootstrap-broker")
+							fk := flowkafka.NewFlowKafka(&flowkafka.ServiceConfig{BootstrapBroker: sbb})
+							brokers, err := fk.BrokerInfo(c.Context)
+							if err != nil {
+								return errors.Wrapf(err, "broker info")
+							}
+							marshal, err := json.Marshal(brokers)
+							if err != nil {
+								return errors.Wrapf(err, "marshal")
+							}
+							fmt.Println(string(marshal))
+
+							return nil
 						},
 					},
 					{

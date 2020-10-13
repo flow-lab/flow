@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/Shopify/sarama"
+	"github.com/pkg/errors"
 )
 
 // ConfigEntry represents topic configuration.
@@ -27,6 +28,12 @@ type Metadata struct {
 	Topics []*Topic
 }
 
+// Broker represents kafka broker.
+type Broker struct {
+	ID   string `json:"id,omitempty"`
+	Addr string `json:"addr,omitempty"`
+}
+
 type config struct {
 	saramaConfig    *sarama.Config
 	bootstrapBroker string
@@ -40,6 +47,7 @@ type FlowKafka interface {
 	DescribeTopic(topic string) (*Topic, error)
 	Produce(ctx context.Context, topic string, msg Message) error
 	Read(ctx context.Context, topic string, bufferSize int) <-chan Message
+	BrokerInfo(ctx context.Context) ([]Broker, error)
 }
 
 type ServiceConfig struct {
@@ -169,7 +177,6 @@ type Message struct {
 func (ss *saramaService) Read(ctx context.Context, topic string, bufferSize int) <-chan Message {
 	result := make(chan Message, bufferSize)
 	go func(result chan<- Message) {
-		defer close(result)
 		// in case ctx is done cancel
 		select {
 		case <-ctx.Done():
@@ -182,13 +189,14 @@ func (ss *saramaService) Read(ctx context.Context, topic string, bufferSize int)
 			panic(err)
 		}
 
-		p, err := consumer.Partitions(topic)
+		partitions, err := consumer.Partitions(topic)
 		if err != nil {
 			panic(err)
 		}
 
-		for _, i := range p {
-			partition, err := consumer.ConsumePartition(topic, i, 0)
+		consumers := make([]sarama.PartitionConsumer, len(partitions))
+		for i, p := range partitions {
+			c, err := consumer.ConsumePartition(topic, p, 0)
 			if err != nil {
 				panic(err)
 			}
@@ -200,20 +208,45 @@ func (ss *saramaService) Read(ctx context.Context, topic string, bufferSize int)
 			default:
 			}
 
-			for {
-				select {
-				case msg := <-partition.Messages():
-					fmt.Printf("received message/(%s)/(%s)/%d/%d\n", string(msg.Key), string(msg.Value), msg.Partition, msg.Offset)
-					result <- Message{
-						Key:   msg.Key,
-						Value: msg.Value,
+			consumers[i] = c
+		}
+
+		fmt.Printf("got %d\n", len(partitions))
+
+		for _, c := range consumers {
+			go func(pc sarama.PartitionConsumer) {
+				for {
+					select {
+					case msg := <-pc.Messages():
+						fmt.Printf("received message/(%s)/(%s)/%d/%d\n", string(msg.Key), string(msg.Value), msg.Partition, msg.Offset)
+						result <- Message{
+							Key:   msg.Key,
+							Value: msg.Value,
+						}
+					case <-ctx.Done():
+						return
 					}
-				case <-ctx.Done():
-					return
 				}
-			}
+			}(c)
 		}
 	}(result)
 
 	return result
+}
+
+func (ss *saramaService) BrokerInfo(_ context.Context) ([]Broker, error) {
+	client, err := sarama.NewClient([]string{ss.bootstrapBroker}, ss.saramaConfig)
+	if err != nil {
+		return nil, errors.Wrap(err, "new client")
+	}
+
+	brokers := make([]Broker, 0)
+	for _, b := range client.Brokers() {
+		brokers = append(brokers, Broker{
+			Addr: b.Addr(),
+			ID:   fmt.Sprintf("%d", b.ID()),
+		})
+	}
+
+	return brokers, nil
 }
