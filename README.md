@@ -145,7 +145,7 @@ NOTE: Flow CLI is under development, and may occasionally make backwards-incompa
 
      `flow kafka send --cluster-name "MSK-Dev" --topic "topic-name" --message "test"`
      
-* pipe messages from topic to topic
+* pipe messages from source to destination topic
 
      `flow kafka pipe --sbb localhost:9092 --st src-topic --dbb localhost:9092 --dt dst-topic`
 
