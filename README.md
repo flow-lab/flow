@@ -16,7 +16,7 @@ NOTE: Flow CLI is under development, and may occasionally make backwards-incompa
 * latest version from github releases
 
     ```sh
-    curl https://raw.githubusercontent.com/flow-lab/flow/master/bin/get-flow.sh --output get-flow.sh
+    curl --fail https://raw.githubusercontent.com/flow-lab/flow/master/bin/get-flow.sh --output get-flow.sh
     chmod +x get-flow.sh
     ./get-flow.sh
     ```
