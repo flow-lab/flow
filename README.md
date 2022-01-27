@@ -13,12 +13,6 @@ NOTE: Flow CLI is under development, and may occasionally make backwards-incompa
     brew install flow-lab/tap/flow
     ```
 
-* [snap](https://snapcraft.io/flow)
-
-    ```sh
-    sudo snap install flow --classic
-    ``` 
-
 * latest version from github releases
 
     ```sh
