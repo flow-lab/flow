@@ -40,7 +40,7 @@ import (
 	"github.com/pkg/errors"
 	vegeta "github.com/tsenart/vegeta/lib"
 	"golang.org/x/oauth2"
-	"io/ioutil"
+	"io"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -341,7 +341,7 @@ func main() {
 							}
 							defer jsonFile.Close()
 
-							byteValue, _ := ioutil.ReadAll(jsonFile)
+							byteValue, _ := io.ReadAll(jsonFile)
 							err = json.Unmarshal(byteValue, &items)
 							if err != nil {
 								return err
@@ -433,7 +433,7 @@ func main() {
 							}
 							defer jsonFile.Close()
 
-							byteValue, _ := ioutil.ReadAll(jsonFile)
+							byteValue, _ := io.ReadAll(jsonFile)
 							err = json.Unmarshal(byteValue, &items)
 							if err != nil {
 								return err
@@ -538,7 +538,7 @@ func main() {
 							}
 							defer jsonFile.Close()
 
-							byteValue, _ := ioutil.ReadAll(jsonFile)
+							byteValue, _ := io.ReadAll(jsonFile)
 							err = json.Unmarshal(byteValue, &items)
 							if err != nil {
 								return err
@@ -643,7 +643,7 @@ func main() {
 								var jso []byte
 								var werr error
 								if jso, werr = json.Marshal(results); werr == nil {
-									if err := ioutil.WriteFile(fileName, jso, 0644); err != nil {
+									if err := os.WriteFile(fileName, jso, 0644); err != nil {
 										return err
 									}
 									fmt.Printf("result wrote to: %v", fileName)
@@ -826,7 +826,7 @@ func main() {
 								var jso []byte
 								var werr error
 								if jso, werr = json.Marshal(l); werr == nil {
-									if err := ioutil.WriteFile(fileName, jso, 0644); err != nil {
+									if err := os.WriteFile(fileName, jso, 0644); err != nil {
 										return err
 									}
 									fmt.Printf("result wrote to: %v", fileName)
@@ -1036,7 +1036,7 @@ func main() {
 								if err != nil {
 									return fmt.Errorf("error when opening %s", inFileName)
 								}
-								byteValue, err = ioutil.ReadAll(jsonFile)
+								byteValue, err = io.ReadAll(jsonFile)
 								if err != nil {
 									return err
 								}
@@ -1209,11 +1209,11 @@ func main() {
 										fmt.Println(errors.Wrapf(err, "receive message"))
 									}
 									for _, msg := range resp.Messages {
-										json, err := json.Marshal(&msg)
+										jsonBytes, err := json.Marshal(&msg)
 										if err != nil {
 											fmt.Println(errors.Wrapf(err, "marshal"))
 										}
-										fmt.Printf("%s", string(json))
+										fmt.Printf("%s", string(jsonBytes))
 									}
 
 									select {
@@ -1490,7 +1490,7 @@ func main() {
 							})
 
 							b, _ := json.Marshal(logEvents)
-							err = ioutil.WriteFile(fileName, b, 0644)
+							err = os.WriteFile(fileName, b, 0644)
 							if err != nil {
 								return err
 							}
@@ -1613,12 +1613,12 @@ func main() {
 								return err
 							}
 
-							bytes, err := json.Marshal(logGroups)
+							jsonBytes, err := json.Marshal(logGroups)
 							if err != nil {
 								return err
 							}
 
-							fmt.Print(string(bytes))
+							fmt.Print(string(jsonBytes))
 
 							return nil
 						},
@@ -1647,11 +1647,11 @@ func main() {
 							}
 
 							summary := logs.Summary(logGroups)
-							bytes, err := json.Marshal(summary)
+							jsonBytes, err := json.Marshal(summary)
 							if err != nil {
 								return err
 							}
-							fmt.Print(string(bytes))
+							fmt.Print(string(jsonBytes))
 
 							return nil
 						},
@@ -1770,7 +1770,7 @@ func main() {
 							if err != nil {
 								return err
 							}
-							err = ioutil.WriteFile(outFileName, b, 0644)
+							err = os.WriteFile(outFileName, b, 0644)
 							fmt.Printf("wrote to %v", outFileName)
 							return err
 						},
@@ -1870,7 +1870,7 @@ func main() {
 							}
 
 							b, _ := json.Marshal(entries)
-							_ = ioutil.WriteFile(outFileName, b, 0644)
+							_ = os.WriteFile(outFileName, b, 0644)
 
 							fmt.Printf("exported to %s", outFileName)
 							return nil
@@ -1942,7 +1942,7 @@ func main() {
 							ssmc := secretsmanager.New(sess)
 
 							var secrets []*Secret
-							byteValue, _ := ioutil.ReadAll(jsonFile)
+							byteValue, _ := io.ReadAll(jsonFile)
 							if err := json.Unmarshal(byteValue, &secrets); err != nil {
 								return err
 							}
@@ -1988,7 +1988,7 @@ func main() {
 							defer jsonFile.Close()
 
 							var secrets []*Secret
-							byteValue, _ := ioutil.ReadAll(jsonFile)
+							byteValue, _ := io.ReadAll(jsonFile)
 							if err := json.Unmarshal(byteValue, &secrets); err != nil {
 								return err
 							}
@@ -2056,7 +2056,7 @@ func main() {
 							defer jsonFile.Close()
 
 							var secrets []*Secret
-							byteValue, _ := ioutil.ReadAll(jsonFile)
+							byteValue, _ := io.ReadAll(jsonFile)
 							if err := json.Unmarshal(byteValue, &secrets); err != nil {
 								return err
 							}
@@ -2180,7 +2180,7 @@ func main() {
 							}
 
 							if file != "" {
-								b, err := ioutil.ReadFile(file)
+								b, err := os.ReadFile(file)
 								if err != nil {
 									return err
 								}
@@ -2206,11 +2206,11 @@ func main() {
 								return fmt.Errorf("missing --input")
 							}
 
-							bytes, err := flowbase64.Decode(input)
+							b64Bytes, err := flowbase64.Decode(input)
 							if err != nil {
 								return fmt.Errorf("call to Decode failed: %s", err)
 							}
-							fmt.Println(string(bytes))
+							fmt.Println(string(b64Bytes))
 
 							return nil
 						},
@@ -2388,7 +2388,7 @@ func main() {
 											destFileName = fmt.Sprintf("%s.%s.yml", name, exportType)
 										}
 
-										err = ioutil.WriteFile(destFileName, getExportOutput.Body, 0644)
+										err = os.WriteFile(destFileName, getExportOutput.Body, 0644)
 										fmt.Printf("saved: %s\n", destFileName)
 										if err != nil {
 											return err
@@ -2905,11 +2905,11 @@ func main() {
 								}
 								tr = append(tr, r)
 							}
-							bytes, err := json.Marshal(tr)
+							jsonBytes, err := json.Marshal(tr)
 							if err != nil {
 								return fmt.Errorf("unable to serialize response")
 							}
-							fmt.Printf("%v", string(bytes))
+							fmt.Printf("%v", string(jsonBytes))
 
 							return nil
 						},
@@ -3351,7 +3351,7 @@ func main() {
 						Action: func(c *cli.Context) error {
 							profile := c.String("profile")
 							cluster := c.String("cluster")
-							token := c.Bool("token")
+							printToken := c.Bool("token")
 							kubeconfig := c.String("kubeconfig")
 							if strings.Contains(kubeconfig, "~") {
 								current, err := user.Current()
@@ -3393,13 +3393,13 @@ func main() {
 									break
 								}
 							}
-							bytes, ok := s.Data["token"]
+							tokenBytes, ok := s.Data["token"]
 							if !ok {
 								return fmt.Errorf("eks-admin-token not found")
 							}
 
-							if token {
-								fmt.Printf("token: %s\n\n", string(bytes))
+							if printToken {
+								fmt.Printf("token: %s\n\n", string(tokenBytes))
 							}
 
 							// update config
