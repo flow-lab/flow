@@ -1698,7 +1698,7 @@ func main() {
 							end := endTime.UTC().Format("2006-01-02T15:04:05")
 							end = strings.Replace(end, ":", "_", -1)
 							end = strings.Replace(end, "-", "_", -1)
-							fileName := fmt.Sprintf("%s-%s-%s.csv", c.String("file-name"), start, end)
+							fileName := fmt.Sprintf("%s-%s-%s.csv", c.String("file-name-prefix"), start, end)
 							file, err := os.Create(fileName)
 							if err != nil {
 								return err
