@@ -1691,8 +1691,9 @@ func main() {
 								return err
 							}
 
-							// create CSV file
-							file, err := os.Create(c.String("file-name"))
+							// create file name with start and end time in UTC
+							fileName := fmt.Sprintf("%s-%s-%s.csv", c.String("file-name"), startTime.UTC().Format("2006-01-02T15:04:05"), endTime.UTC().Format("2006-01-02T15:04:05"))
+							file, err := os.Create(fileName)
 							if err != nil {
 								return err
 							}
