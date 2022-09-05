@@ -1665,8 +1665,8 @@ func main() {
 								Required: true,
 							},
 							&cli.StringFlag{
-								Name:  "file-name",
-								Value: "logs.csv",
+								Name:  "file-name-prefix",
+								Value: "logs",
 							},
 							&cli.Int64Flag{
 								Name:        "hours",
@@ -1692,7 +1692,13 @@ func main() {
 							}
 
 							// create file name with start and end time in UTC
-							fileName := fmt.Sprintf("%s-%s-%s.csv", c.String("file-name"), startTime.UTC().Format("2006-01-02T15:04:05"), endTime.UTC().Format("2006-01-02T15:04:05"))
+							start := startTime.UTC().Format("2006-01-02T15:04:05")
+							start = strings.Replace(start, ":", "_", -1)
+							start = strings.Replace(start, "-", "_", -1)
+							end := endTime.UTC().Format("2006-01-02T15:04:05")
+							end = strings.Replace(end, ":", "_", -1)
+							end = strings.Replace(end, "-", "_", -1)
+							fileName := fmt.Sprintf("%s-%s-%s.csv", c.String("file-name"), start, end)
 							file, err := os.Create(fileName)
 							if err != nil {
 								return err
