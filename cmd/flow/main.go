@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
@@ -1651,6 +1652,66 @@ func main() {
 								return err
 							}
 							fmt.Print(string(bytes))
+
+							return nil
+						},
+					},
+					{
+						Name:  "get-log-events",
+						Usage: "get log events",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:     "log-group-name-prefix",
+								Required: true,
+							},
+							&cli.StringFlag{
+								Name:  "file-name",
+								Value: "logs.csv",
+							},
+							&cli.Int64Flag{
+								Name:        "hours",
+								DefaultText: "Number of hours to retrieve logs.",
+								Value:       1,
+							},
+							&cli.StringFlag{
+								Name:  "profile",
+								Value: "",
+							},
+						},
+						Action: func(c *cli.Context) error {
+							profile := c.String("profile")
+							sess := session.NewSessionWithSharedProfile(profile)
+							client := cloudwatchlogs.New(sess)
+							logGroupNamePrefix := c.String("log-group-name-prefix")
+
+							endTime := time.Now()
+							startTime := endTime.Add(-time.Duration(c.Int64("hours")) * time.Hour)
+							events, err := logs.GetLogEvents(logGroupNamePrefix, startTime, endTime, client)
+							if err != nil {
+								return err
+							}
+
+							// create CSV file
+							file, err := os.Create(c.String("file-name"))
+							if err != nil {
+								return err
+							}
+							defer file.Close()
+
+							writer := csv.NewWriter(file)
+							defer writer.Flush()
+
+							werr := writer.Write([]string{"timestamp", "message", "logStreamName"})
+							if werr != nil {
+								return werr
+							}
+
+							for _, event := range events {
+								err := writer.Write([]string{strconv.FormatInt(*event.Timestamp, 10), *event.Message, *event.LogStreamName})
+								if err != nil {
+									return err
+								}
+							}
 
 							return nil
 						},

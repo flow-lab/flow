@@ -324,7 +324,7 @@ OPTIONS:
 ### AWS
 Flow will be configured and will authenticate using the same methods defined by [aws-cli][auth].
 
-Currently it supports authentication with:
+Currently, it supports authentication with:
 
 * A [EnvProvider][EnvProvider] which retrieves credentials from the environment variables of the
   running process. Environment credentials never expire.
