@@ -8,7 +8,7 @@ deps d: ## Download dependencies
 
 .PHONY: deps-upgrade du
 deps-upgrade du: ## Upgrade all dependencies
-	go get -u -t ./...
+	@go get -u -t ./...
 
 .PHONY: tidy ti
 tidy ti: ## Tidy
