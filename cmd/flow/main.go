@@ -1398,6 +1398,7 @@ func main() {
 			}
 		}(),
 		func() *cli.Command {
+			const logGroupDefault = "aws-waf-logs-"
 			return &cli.Command{
 				Name:  "cloudwatchlogs",
 				Usage: "AWS CloudWatch Logs",
@@ -1662,11 +1663,14 @@ func main() {
 						Flags: []cli.Flag{
 							&cli.StringFlag{
 								Name:     "log-group-name-prefix",
-								Required: true,
+								Required: false,
+								Value:    logGroupDefault,
+								Aliases:  []string{"l"},
 							},
 							&cli.StringFlag{
-								Name:  "file-name-prefix",
-								Value: "logs",
+								Name:    "file-name-prefix",
+								Value:   "logs",
+								Aliases: []string{"fp"},
 							},
 							&cli.Int64Flag{
 								Name:        "hours",
@@ -1683,12 +1687,27 @@ func main() {
 							sess := session.NewSessionWithSharedProfile(profile)
 							client := cloudwatchlogs.New(sess)
 							logGroupNamePrefix := c.String("log-group-name-prefix")
+							if logGroupNamePrefix == logGroupDefault {
+								describe, err := logs.Describe(&logGroupNamePrefix, client)
+								if err != nil {
+									return errors.Wrap(err, "Describe failed")
+								}
+
+								for _, logGroup := range describe {
+									// find first matching the prefix
+									if strings.Contains(*logGroup.LogGroupName, logGroupNamePrefix) {
+										logGroupNamePrefix = *logGroup.LogGroupName
+									}
+									break
+								}
+							}
 
 							endTime := time.Now()
 							startTime := endTime.Add(-time.Duration(c.Int64("hours")) * time.Hour)
 							events, err := logs.GetLogEvents(logGroupNamePrefix, startTime, endTime, client)
+							fmt.Println()
 							if err != nil {
-								return err
+								return errors.Wrap(err, "failed to get log events")
 							}
 
 							// create file name with start and end time in UTC
@@ -1701,24 +1720,24 @@ func main() {
 							fileName := fmt.Sprintf("%s-%s-%s.csv", c.String("file-name-prefix"), start, end)
 							file, err := os.Create(fileName)
 							if err != nil {
-								return err
+								return errors.Wrap(err, "failed to create file")
 							}
 							defer file.Close()
 
 							writer := csv.NewWriter(file)
 							defer writer.Flush()
 
-							werr := writer.Write([]string{"timestamp", "message", "logStreamName"})
-							if werr != nil {
-								return werr
+							if err := writer.Write([]string{"timestamp", "message", "logStreamName"}); err != nil {
+								return errors.Wrap(err, "failed to write csv header")
 							}
 
 							for _, event := range events {
-								err := writer.Write([]string{strconv.FormatInt(*event.Timestamp, 10), *event.Message, *event.LogStreamName})
-								if err != nil {
-									return err
+								if err := writer.Write([]string{strconv.FormatInt(*event.Timestamp, 10), *event.Message, *event.LogStreamName}); err != nil {
+									return errors.Wrap(err, "failed to write csv row")
 								}
 							}
+
+							log.Printf("wrote %d log events to %s\n", len(events), fileName)
 
 							return nil
 						},
