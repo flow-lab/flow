@@ -1737,7 +1737,7 @@ func main() {
 								}
 							}
 
-							log.Printf("wrote %d log events to %s\n", len(events), fileName)
+							log.Printf("wrote %d log events to %s from %s\n", len(events), fileName, logGroupNamePrefix)
 
 							return nil
 						},
