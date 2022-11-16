@@ -1,9 +1,13 @@
 package logs
 
 import (
+	"encoding/csv"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs/cloudwatchlogsiface"
+	"github.com/pkg/errors"
+	"log"
+	"strconv"
 	"time"
 )
 
@@ -88,7 +92,7 @@ type LogEvent struct {
 	LogStreamName *string
 }
 
-func GetLogEvents(logGroupName string, startTime, endTime time.Time, c cloudwatchlogsiface.CloudWatchLogsAPI) ([]LogEvent, error) {
+func WriteLogEvents(logGroupName string, startTime, endTime time.Time, c cloudwatchlogsiface.CloudWatchLogsAPI, writer *csv.Writer) error {
 	describeLogStreamsInput := cloudwatchlogs.DescribeLogStreamsInput{
 		LogGroupName: &logGroupName,
 		Descending:   aws.Bool(true),
@@ -103,10 +107,9 @@ func GetLogEvents(logGroupName string, startTime, endTime time.Time, c cloudwatc
 		return lastPage == false
 	})
 	if err != nil {
-		return nil, err
+		return errors.Wrap(err, "failed to describe log streams")
 	}
 
-	var logEvents []LogEvent
 	for _, logStream := range logStreams {
 		input := &cloudwatchlogs.GetLogEventsInput{
 			LogGroupName:  &logGroupName,
@@ -115,23 +118,32 @@ func GetLogEvents(logGroupName string, startTime, endTime time.Time, c cloudwatc
 			StartTime:     aws.Int64(startTime.UnixNano() / int64(time.Millisecond)),
 			EndTime:       aws.Int64(endTime.UnixNano() / int64(time.Millisecond)),
 		}
+		var logEvents []*LogEvent
 		err := c.GetLogEventsPages(input, func(output *cloudwatchlogs.GetLogEventsOutput, lastPage bool) bool {
 			for _, le := range output.Events {
 				print(".")
-
 				event := LogEvent{
 					Timestamp:     le.Timestamp,
 					Message:       le.Message,
 					LogStreamName: logStream.LogStreamName,
 				}
-				logEvents = append(logEvents, event)
+				logEvents = append(logEvents, &event)
 			}
+
+			for _, le := range logEvents {
+				if err := writer.Write([]string{strconv.FormatInt(*le.Timestamp, 10), *le.Message, *le.LogStreamName}); err != nil {
+					// not much we can do here unfortunately
+					log.Fatalf("failed to write to csv: %v", err)
+				}
+			}
+			writer.Flush()
+			logEvents = nil
 			return lastPage == false
 		})
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	return logEvents, nil
+	return err
 }

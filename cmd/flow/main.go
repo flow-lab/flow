@@ -1704,20 +1704,15 @@ func main() {
 
 							endTime := time.Now()
 							startTime := endTime.Add(-time.Duration(c.Int64("hours")) * time.Hour)
-							events, err := logs.GetLogEvents(logGroupNamePrefix, startTime, endTime, client)
-							fmt.Println()
-							if err != nil {
-								return errors.Wrap(err, "failed to get log events")
-							}
 
 							// create file name with start and end time in UTC
 							start := startTime.UTC().Format("2006-01-02T15:04:05")
-							start = strings.Replace(start, ":", "_", -1)
-							start = strings.Replace(start, "-", "_", -1)
+							start = strings.Replace(start, ":", "", -1)
+							start = strings.Replace(start, "-", "", -1)
 							end := endTime.UTC().Format("2006-01-02T15:04:05")
-							end = strings.Replace(end, ":", "_", -1)
-							end = strings.Replace(end, "-", "_", -1)
-							fileName := fmt.Sprintf("%s-%s-%s.csv", c.String("file-name-prefix"), start, end)
+							end = strings.Replace(end, ":", "", -1)
+							end = strings.Replace(end, "-", "", -1)
+							fileName := fmt.Sprintf("%s-%sZ-%sZ.csv", c.String("file-name-prefix"), start, end)
 							file, err := os.Create(fileName)
 							if err != nil {
 								return errors.Wrap(err, "failed to create file")
@@ -1731,13 +1726,11 @@ func main() {
 								return errors.Wrap(err, "failed to write csv header")
 							}
 
-							for _, event := range events {
-								if err := writer.Write([]string{strconv.FormatInt(*event.Timestamp, 10), *event.Message, *event.LogStreamName}); err != nil {
-									return errors.Wrap(err, "failed to write csv row")
-								}
+							if err := logs.WriteLogEvents(logGroupNamePrefix, startTime, endTime, client, writer); err != nil {
+								return errors.Wrap(err, "failed to get log events")
 							}
 
-							log.Printf("wrote %d log events to %s from %s\n", len(events), fileName, logGroupNamePrefix)
+							log.Printf("wrote log events to %s from %s\n", fileName, logGroupNamePrefix)
 
 							return nil
 						},
