@@ -1,6 +1,7 @@
 package logs
 
 import (
+	"context"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs/cloudwatchlogsiface"
@@ -31,7 +32,6 @@ func (c *cloudwatchLogsMock) DescribeLogGroupsPages(input *cloudwatchlogs.Descri
 
 func TestSetRetention(t *testing.T) {
 	cloudwatchLogsMock := &cloudwatchLogsMock{}
-
 	err := SetRetention("test", int64(2), cloudwatchLogsMock)
 
 	assert.Nil(t, err)
@@ -39,8 +39,7 @@ func TestSetRetention(t *testing.T) {
 
 func TestDescribe(t *testing.T) {
 	cloudwatchLogsMock := &cloudwatchLogsMock{}
-
-	output, err := Describe(nil, cloudwatchLogsMock)
+	output, err := Describe(context.Background(), nil, cloudwatchLogsMock)
 
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(output))

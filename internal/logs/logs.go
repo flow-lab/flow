@@ -1,6 +1,7 @@
 package logs
 
 import (
+	"context"
 	"encoding/csv"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
@@ -30,14 +31,14 @@ func SetRetention(logGroupName string, retentionDays int64, c cloudwatchlogsifac
 }
 
 // Describe returns details for log groups
-func Describe(logGroupNamePrefix *string, c cloudwatchlogsiface.CloudWatchLogsAPI) ([]*cloudwatchlogs.LogGroup, error) {
+func Describe(ctx context.Context, logGroupNamePrefix *string, c cloudwatchlogsiface.CloudWatchLogsAPI) ([]*cloudwatchlogs.LogGroup, error) {
 	input := &cloudwatchlogs.DescribeLogGroupsInput{}
 
 	if logGroupNamePrefix != nil && *logGroupNamePrefix != "" {
 		input.LogGroupNamePrefix = logGroupNamePrefix
 	}
 	var logGroups []*cloudwatchlogs.LogGroup
-	err := c.DescribeLogGroupsPages(input, func(output *cloudwatchlogs.DescribeLogGroupsOutput, lastPage bool) bool {
+	err := c.DescribeLogGroupsPagesWithContext(ctx, input, func(output *cloudwatchlogs.DescribeLogGroupsOutput, lastPage bool) bool {
 		for _, lg := range output.LogGroups {
 			logGroups = append(logGroups, lg)
 		}
@@ -92,15 +93,14 @@ type LogEvent struct {
 	LogStreamName *string
 }
 
-func WriteLogEvents(logGroupName string, startTime, endTime time.Time, c cloudwatchlogsiface.CloudWatchLogsAPI, writer *csv.Writer) error {
+func WriteLogEvents(ctx context.Context, logGroupName string, startTime, endTime time.Time, c cloudwatchlogsiface.CloudWatchLogsAPI, writer *csv.Writer) error {
 	describeLogStreamsInput := cloudwatchlogs.DescribeLogStreamsInput{
 		LogGroupName: &logGroupName,
 		Descending:   aws.Bool(true),
 		OrderBy:      aws.String(cloudwatchlogs.OrderByLastEventTime),
 	}
-
 	var logStreams []*cloudwatchlogs.LogStream
-	err := c.DescribeLogStreamsPages(&describeLogStreamsInput, func(output *cloudwatchlogs.DescribeLogStreamsOutput, lastPage bool) bool {
+	err := c.DescribeLogStreamsPagesWithContext(ctx, &describeLogStreamsInput, func(output *cloudwatchlogs.DescribeLogStreamsOutput, lastPage bool) bool {
 		for _, ls := range output.LogStreams {
 			logStreams = append(logStreams, ls)
 		}
@@ -119,7 +119,7 @@ func WriteLogEvents(logGroupName string, startTime, endTime time.Time, c cloudwa
 			EndTime:       aws.Int64(endTime.UnixNano() / int64(time.Millisecond)),
 		}
 		var logEvents []*LogEvent
-		err := c.GetLogEventsPages(input, func(output *cloudwatchlogs.GetLogEventsOutput, lastPage bool) bool {
+		err := c.GetLogEventsPagesWithContext(ctx, input, func(output *cloudwatchlogs.GetLogEventsOutput, lastPage bool) bool {
 			for _, le := range output.Events {
 				print(".")
 				event := LogEvent{

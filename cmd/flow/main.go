@@ -53,6 +53,7 @@ import (
 	"os/signal"
 	"os/user"
 	"path"
+	"path/filepath"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 	"strconv"
 	"strings"
@@ -784,7 +785,7 @@ func main() {
 							itemsBefore := false
 							err := ddbc.ScanPages(&params, func(output *dynamodb.ScanOutput, lastPage bool) bool {
 								if *output.Count > int64(0) {
-									// lets try to stream in comma
+									// let's try to stream in comma
 									if itemsBefore && !shouldWriteToFile {
 										if _, err := writer.Write([]byte(",")); err != nil {
 											panic(err)
@@ -1609,7 +1610,7 @@ func main() {
 							sess := session.NewSessionWithSharedProfile(profile)
 							cwlc := cloudwatchlogs.New(sess)
 
-							logGroups, err := logs.Describe(&logGroupNamePrefix, cwlc)
+							logGroups, err := logs.Describe(c.Context, &logGroupNamePrefix, cwlc)
 							if err != nil {
 								return err
 							}
@@ -1642,7 +1643,7 @@ func main() {
 							sess := session.NewSessionWithSharedProfile(profile)
 							cwlc := cloudwatchlogs.New(sess)
 							logGroupNamePrefix := c.String("log-group-name-prefix")
-							logGroups, err := logs.Describe(&logGroupNamePrefix, cwlc)
+							logGroups, err := logs.Describe(c.Context, &logGroupNamePrefix, cwlc)
 							if err != nil {
 								return err
 							}
@@ -1688,7 +1689,7 @@ func main() {
 							client := cloudwatchlogs.New(sess)
 							logGroupNamePrefix := c.String("log-group-name-prefix")
 							if logGroupNamePrefix == logGroupDefault {
-								describe, err := logs.Describe(&logGroupNamePrefix, client)
+								describe, err := logs.Describe(c.Context, &logGroupNamePrefix, client)
 								if err != nil {
 									return errors.Wrap(err, "Describe failed")
 								}
@@ -1726,7 +1727,7 @@ func main() {
 								return errors.Wrap(err, "failed to write csv header")
 							}
 
-							if err := logs.WriteLogEvents(logGroupNamePrefix, startTime, endTime, client, writer); err != nil {
+							if err := logs.WriteLogEvents(c.Context, logGroupNamePrefix, startTime, endTime, client, writer); err != nil {
 								return errors.Wrap(err, "failed to get log events")
 							}
 
@@ -3546,6 +3547,87 @@ func main() {
 				},
 			}
 		}(),
+		func() *cli.Command {
+			return &cli.Command{
+				Name:        "misc",
+				Description: "Miscellaneous helpers",
+				Usage:       "Miscellaneous helpers",
+				Subcommands: []*cli.Command{
+					{
+						Name:  "chunk-csv",
+						Usage: "Splits a csv file into multiple files",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:     "file",
+								Required: true,
+							},
+							&cli.IntFlag{
+								Name:  "chunk-size",
+								Value: 1,
+							},
+						},
+						Action: func(c *cli.Context) error {
+							file := c.String("file")
+							if !strings.HasSuffix(file, ".csv") {
+								return errors.New("file is not a csv file")
+							}
+
+							// check if filePath is absolute
+							if !filepath.IsAbs(file) {
+								// change to absolute path
+								absPath, err := filepath.Abs(file)
+								if err != nil {
+									return errors.Wrap(err, "get absolute path")
+								}
+								file = absPath
+							}
+
+							// check if file exists in the local directory
+							_, err := os.Stat(file)
+							if os.IsNotExist(err) {
+								return errors.New("file does not exist")
+							}
+
+							if file != "" {
+								header, chunks, err := chunkFile(file, c.Int("chunk-size"))
+								if err != nil {
+									return err
+								}
+
+								// write chunks to files
+								for i, chunk := range chunks {
+									// if chunk is empty, skip
+									if len(chunk) == 0 {
+										continue
+									}
+
+									// add header to chunk as a first line
+									fileName := strings.Replace(file, ".csv", fmt.Sprintf("_%d.csv", i), 1)
+									if err != nil {
+										return err
+									}
+
+									data := []string{header}
+									data = append(data, chunk...)
+									err := os.WriteFile(fileName, []byte(strings.Join(data, "\n")), 0644)
+									if err != nil {
+										return err
+									}
+
+									if err != nil {
+										return err
+									}
+								}
+							} else {
+								return errors.New("file not found")
+							}
+
+							return nil
+						},
+					},
+				},
+			}
+		}(),
 	}
 
 	app.Action = func(c *cli.Context) error {
@@ -3557,6 +3639,31 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func chunkFile(filePath string, chunkSize int) (string, [][]string, error) {
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", nil, errors.Wrap(err, "read file")
+	}
+
+	rows := make([]string, 0)
+	for _, row := range strings.Split(string(content), "\n") {
+		rows = append(rows, row)
+	}
+
+	// read header
+	headerArr := rows[0]
+	chunks := make([][]string, chunkSize)
+	for i, line := range rows {
+		// skip header
+		if i == 0 {
+			continue
+		}
+		chunks[i%chunkSize] = append(chunks[i%chunkSize], line)
+	}
+
+	return headerArr, chunks, nil
 }
 
 func newClientset(cluster *eks.Cluster, sess *asession.Session) (*kubernetes.Clientset, error) {
