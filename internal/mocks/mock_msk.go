@@ -5,34 +5,35 @@
 package mocks
 
 import (
-	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
+
+	gomock "github.com/golang/mock/gomock"
 )
 
-// MockFlowMSK is a mock of FlowMSK interface
+// MockFlowMSK is a mock of FlowMSK interface.
 type MockFlowMSK struct {
 	ctrl     *gomock.Controller
 	recorder *MockFlowMSKMockRecorder
 }
 
-// MockFlowMSKMockRecorder is the mock recorder for MockFlowMSK
+// MockFlowMSKMockRecorder is the mock recorder for MockFlowMSK.
 type MockFlowMSKMockRecorder struct {
 	mock *MockFlowMSK
 }
 
-// NewMockFlowMSK creates a new mock instance
+// NewMockFlowMSK creates a new mock instance.
 func NewMockFlowMSK(ctrl *gomock.Controller) *MockFlowMSK {
 	mock := &MockFlowMSK{ctrl: ctrl}
 	mock.recorder = &MockFlowMSKMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockFlowMSK) EXPECT() *MockFlowMSKMockRecorder {
 	return m.recorder
 }
 
-// GetBootstrapBrokers mocks base method
+// GetBootstrapBrokers mocks base method.
 func (m *MockFlowMSK) GetBootstrapBrokers(clusterName string) (*string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetBootstrapBrokers", clusterName)
@@ -41,13 +42,13 @@ func (m *MockFlowMSK) GetBootstrapBrokers(clusterName string) (*string, error) {
 	return ret0, ret1
 }
 
-// GetBootstrapBrokers indicates an expected call of GetBootstrapBrokers
+// GetBootstrapBrokers indicates an expected call of GetBootstrapBrokers.
 func (mr *MockFlowMSKMockRecorder) GetBootstrapBrokers(clusterName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBootstrapBrokers", reflect.TypeOf((*MockFlowMSK)(nil).GetBootstrapBrokers), clusterName)
 }
 
-// GetClusterArn mocks base method
+// GetClusterArn mocks base method.
 func (m *MockFlowMSK) GetClusterArn(clusterName string) (*string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetClusterArn", clusterName)
@@ -56,7 +57,7 @@ func (m *MockFlowMSK) GetClusterArn(clusterName string) (*string, error) {
 	return ret0, ret1
 }
 
-// GetClusterArn indicates an expected call of GetClusterArn
+// GetClusterArn indicates an expected call of GetClusterArn.
 func (mr *MockFlowMSKMockRecorder) GetClusterArn(clusterName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterArn", reflect.TypeOf((*MockFlowMSK)(nil).GetClusterArn), clusterName)

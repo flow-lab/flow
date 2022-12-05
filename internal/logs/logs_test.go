@@ -3,6 +3,7 @@ package logs
 import (
 	"context"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs/cloudwatchlogsiface"
 	"github.com/stretchr/testify/assert"
@@ -17,7 +18,7 @@ func (c *cloudwatchLogsMock) PutRetentionPolicy(input *cloudwatchlogs.PutRetenti
 	return nil, nil
 }
 
-func (c *cloudwatchLogsMock) DescribeLogGroupsPages(input *cloudwatchlogs.DescribeLogGroupsInput, f func(*cloudwatchlogs.DescribeLogGroupsOutput, bool) bool) error {
+func (c *cloudwatchLogsMock) DescribeLogGroupsPagesWithContext(ctx aws.Context, input *cloudwatchlogs.DescribeLogGroupsInput, f func(*cloudwatchlogs.DescribeLogGroupsOutput, bool) bool, req ...request.Option) error {
 	output := &cloudwatchlogs.DescribeLogGroupsOutput{
 		LogGroups: []*cloudwatchlogs.LogGroup{
 			{
