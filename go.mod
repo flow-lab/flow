@@ -3,11 +3,11 @@ module github.com/flow-lab/flow
 require (
 	cloud.google.com/go/pubsub v1.28.0
 	github.com/Shopify/sarama v1.38.1
-	github.com/aws/aws-sdk-go v1.44.205
+	github.com/aws/aws-sdk-go v1.44.210
 	github.com/golang/mock v1.6.0
 	github.com/google/go-github/v32 v32.1.0
 	github.com/pkg/errors v0.9.1
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.8.2
 	github.com/tsenart/vegeta v12.7.0+incompatible
 	github.com/urfave/cli/v2 v2.24.4
 	golang.org/x/oauth2 v0.5.0
@@ -54,12 +54,12 @@ require (
 	github.com/jcmturner/aescts/v2 v2.0.0 // indirect
 	github.com/jcmturner/dnsutils/v2 v2.0.0 // indirect
 	github.com/jcmturner/gofork v1.7.6 // indirect
-	github.com/jcmturner/gokrb5/v8 v8.4.3 // indirect
+	github.com/jcmturner/gokrb5/v8 v8.4.4 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/compress v1.15.15 // indirect
+	github.com/klauspost/compress v1.16.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
@@ -89,14 +89,14 @@ require (
 	gonum.org/v1/gonum v0.0.0-20190929233944-b20cf7805fc4 // indirect
 	google.golang.org/api v0.110.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20230216225411-c8e22ba71e44 // indirect
+	google.golang.org/genproto v0.0.0-20230227214838-9b19f0bdc514 // indirect
 	google.golang.org/grpc v1.53.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/klog/v2 v2.90.0 // indirect
-	k8s.io/kube-openapi v0.0.0-20230217203603-ff9a8e8fa21d // indirect
+	k8s.io/kube-openapi v0.0.0-20230227204213-929b88f6cb43 // indirect
 	k8s.io/utils v0.0.0-20230220204549-a5ecb0141aa5 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect

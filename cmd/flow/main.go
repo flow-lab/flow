@@ -3625,6 +3625,99 @@ func main() {
 							return nil
 						},
 					},
+					{
+						Name:  "to-jsonl",
+						Usage: "Converts a json containing a list of object to jsonl. Useful for importing to Google BigQuery",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:     "file",
+								Required: true,
+							},
+							&cli.StringFlag{
+								Name:     "out-file",
+								Required: false,
+							},
+						},
+						Action: func(c *cli.Context) error {
+							file := c.String("file")
+							if !strings.HasSuffix(file, ".json") {
+								return errors.New("file is not a json file")
+							}
+
+							// check if filePath is absolute
+							if !filepath.IsAbs(file) {
+								// change to absolute path
+								absPath, err := filepath.Abs(file)
+								if err != nil {
+									return errors.Wrap(err, "get absolute path")
+								}
+								file = absPath
+							}
+
+							// check if file exists in the local directory
+							_, err := os.Stat(file)
+							if os.IsNotExist(err) {
+								return errors.New("file does not exist")
+							}
+
+							content, err := os.Open(file)
+							if err != nil {
+								return errors.Wrap(err, "open file")
+							}
+							defer content.Close()
+
+							// create output in memory buffer
+							buf := new(bytes.Buffer)
+
+							// Create JSON decoder for input file
+							decoder := json.NewDecoder(content)
+							writer := bufio.NewWriter(buf)
+							defer writer.Flush()
+
+							var objs []interface{}
+							if err := decoder.Decode(&objs); err != nil {
+								return errors.Wrap(err, "decode json")
+							}
+
+							// TODO [grokrz]: fo big files this is not efficient, we should use a stream instead
+
+							// Write each object as a separate line in the output file
+							for _, obj := range objs {
+								jsonBytes, err := json.Marshal(obj)
+								if err != nil {
+									panic(err)
+								}
+								_, err = writer.Write(jsonBytes)
+								if err != nil {
+									return errors.Wrap(err, "writer.Write")
+								}
+								err = writer.WriteByte('\n')
+								if err != nil {
+									return errors.Wrap(err, "writer.WriteByte")
+								}
+							}
+
+							// Flush the buffer to ensure all bytes are written
+							writer.Flush()
+
+							if outFile := c.String("out-file"); outFile != "" {
+								// write buf to the file
+								err := os.WriteFile(outFile, buf.Bytes(), 0644)
+								if err != nil {
+									return errors.Wrap(err, "write file")
+								}
+								return nil
+							}
+
+							// write the buf to the stdout
+							_, err = os.Stdout.Write(buf.Bytes())
+							if err != nil {
+								return errors.Wrap(err, "write to stdout")
+							}
+
+							return nil
+						},
+					},
 				},
 			}
 		}(),
