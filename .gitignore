@@ -12,3 +12,6 @@
 *.out
 
 .idea
+
+*.pem
+jwk.json

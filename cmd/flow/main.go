@@ -4,9 +4,14 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha256"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/csv"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -46,6 +51,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"log"
+	"math/big"
 	"net/http"
 	"net/url"
 	"os"
@@ -95,7 +101,7 @@ type Parameter struct {
 
 func main() {
 	app := cli.NewApp()
-	app.Name = "Flow"
+	app.Name = "flow"
 	app.Version = version
 	a := cli.Author{
 		Name:  "Krzysztof Grodzicki",
@@ -3714,6 +3720,123 @@ func main() {
 							if err != nil {
 								return errors.Wrap(err, "write to stdout")
 							}
+
+							return nil
+						},
+					},
+				},
+			}
+		}(),
+		func() *cli.Command {
+			return &cli.Command{
+				Name:        "crypto",
+				Description: "Encryption helpers",
+				Usage:       "Encryption helpers. Generate keys",
+				Subcommands: []*cli.Command{
+					{
+						Name:  "genrsa",
+						Usage: "Generates a RSA key pair and saves it to a file in pem format",
+						Flags: []cli.Flag{
+							&cli.IntFlag{
+								Name:  "bits",
+								Value: 2048,
+							},
+							&cli.BoolFlag{
+								Name:  "jwk",
+								Value: false,
+							},
+						},
+						Action: func(c *cli.Context) error {
+							bits := c.Int("bits")
+							fmt.Printf("Generating RSA key pair with %d bits\n", bits)
+
+							// Generate RSA key pair
+							privateKey, err := rsa.GenerateKey(rand.Reader, bits)
+							if err != nil {
+								return errors.Wrap(err, "generate rsa key pair")
+							}
+
+							privFile, err := os.OpenFile("private_key.pem", os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
+							if err != nil {
+								if os.IsExist(err) {
+									return errors.New("private key file already exists, please delete it first")
+								}
+								return errors.Wrap(err, "create private key file")
+							}
+							defer privFile.Close()
+
+							privKeyBytes := x509.MarshalPKCS1PrivateKey(privateKey)
+							privPem := pem.EncodeToMemory(
+								&pem.Block{
+									Type:  "RSA PRIVATE KEY",
+									Bytes: privKeyBytes,
+								},
+							)
+
+							if _, err := privFile.Write(privPem); err != nil {
+								return errors.Wrap(err, "write private key file")
+							}
+							fmt.Println("Private key saved to private_key.pem")
+
+							pubFile, err := os.OpenFile("public_key.pem", os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
+							if err != nil {
+								if os.IsExist(err) {
+									return errors.New("public key file already exists, please delete it first")
+								}
+								return errors.Wrap(err, "create public key file")
+							}
+							defer pubFile.Close()
+
+							publicKey := privateKey.PublicKey
+
+							pubKeyBytes := x509.MarshalPKCS1PublicKey(&publicKey)
+							pubPem := pem.EncodeToMemory(
+								&pem.Block{
+									Type:  "RSA PUBLIC KEY",
+									Bytes: pubKeyBytes,
+								},
+							)
+
+							if _, err := pubFile.Write(pubPem); err != nil {
+								return errors.Wrap(err, "write public key file")
+							}
+							fmt.Println("Public key saved to public_key.pem")
+
+							if !c.Bool("jwk") {
+								return nil
+							}
+
+							kid := sha256.Sum256(pubKeyBytes)
+
+							jwk := map[string]interface{}{
+								"kty": "RSA",
+								"n":   base64.RawURLEncoding.EncodeToString(publicKey.N.Bytes()),
+								"e":   base64.RawURLEncoding.EncodeToString(big.NewInt(int64(publicKey.E)).Bytes()),
+								"kid": fmt.Sprintf("%x", kid),
+							}
+
+							var keys []map[string]interface{}
+							keys = append(keys, jwk)
+
+							jwkKeysJson, err := json.Marshal(keys)
+							if err != nil {
+								return errors.Wrap(err, "marshal keys")
+							}
+							fmt.Println(string(jwkKeysJson))
+
+							jwkFile, err := os.OpenFile("jwk.json", os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
+							if err != nil {
+								if os.IsExist(err) {
+									return errors.New("jwk file already exists, please delete it first")
+								}
+								return errors.Wrap(err, "create jwk file")
+							}
+							defer jwkFile.Close()
+
+							if _, err := jwkFile.Write(jwkKeysJson); err != nil {
+								return errors.Wrap(err, "write jwk file")
+							}
+							fmt.Println("JWK saved to jwk.json")
 
 							return nil
 						},
