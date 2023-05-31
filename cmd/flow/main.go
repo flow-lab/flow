@@ -3814,6 +3814,7 @@ func main() {
 								"e":   base64.RawURLEncoding.EncodeToString(big.NewInt(int64(publicKey.E)).Bytes()),
 								"kid": fmt.Sprintf("%x", kid),
 								"alg": "RS256",
+								"use": "sig",
 							}
 
 							var keys []map[string]interface{}
