@@ -3813,6 +3813,7 @@ func main() {
 								"n":   base64.RawURLEncoding.EncodeToString(publicKey.N.Bytes()),
 								"e":   base64.RawURLEncoding.EncodeToString(big.NewInt(int64(publicKey.E)).Bytes()),
 								"kid": fmt.Sprintf("%x", kid),
+								"alg": "RS256",
 							}
 
 							var keys []map[string]interface{}
