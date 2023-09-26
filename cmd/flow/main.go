@@ -8,6 +8,7 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/csv"
 	"encoding/json"
@@ -3735,7 +3736,7 @@ func main() {
 				Subcommands: []*cli.Command{
 					{
 						Name:  "genrsa",
-						Usage: "Generates a RSA key pair and saves it to a file in pem format",
+						Usage: "Generates a RSA key pair and self signed x509 cert and saves it to a file in pem format",
 						Flags: []cli.Flag{
 							&cli.IntFlag{
 								Name:  "bits",
@@ -3744,6 +3745,16 @@ func main() {
 							&cli.BoolFlag{
 								Name:  "jwk",
 								Value: false,
+							},
+							&cli.StringFlag{
+								Name:    "common-name",
+								Value:   "flow",
+								Aliases: []string{"cn"},
+							},
+							&cli.StringFlag{
+								Name:    "organisation",
+								Value:   "",
+								Aliases: []string{"o"},
 							},
 						},
 						Action: func(c *cli.Context) error {
@@ -3802,6 +3813,40 @@ func main() {
 							}
 							fmt.Println("Public key saved to public_key.pem")
 
+							// Create a self-signed certificate for the public key
+							pkixName := pkix.Name{}
+							if cn := c.String("common-name"); cn != "" {
+								pkixName.CommonName = cn
+							}
+							if o := c.String("organisation"); o != "" {
+								pkixName.Organization = []string{o}
+							}
+							certTmpl := x509.Certificate{
+								SerialNumber: big.NewInt(1),
+								Subject:      pkixName,
+								NotBefore:    time.Now(),
+								NotAfter:     time.Now().AddDate(3, 0, 0),
+								KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+							}
+
+							certDER, err := x509.CreateCertificate(rand.Reader, &certTmpl, &certTmpl, &privateKey.PublicKey, privateKey)
+							if err != nil {
+								return errors.Wrap(err, "Failed to create certificate")
+							}
+
+							certFile, err := os.OpenFile("certificate.pem", os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
+							if err != nil {
+								return errors.Wrap(err, "Failed to open certificate.pem for writing")
+							}
+							defer certFile.Close()
+
+							err = pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: certDER})
+							if err != nil {
+								return errors.Wrap(err, "Failed to write data to certificate.pem")
+							}
+							fmt.Println("Public certificate saved to certificate.pem")
+
+							// Create JWK
 							if !c.Bool("jwk") {
 								return nil
 							}
