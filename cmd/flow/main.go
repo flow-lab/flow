@@ -1469,6 +1469,11 @@ func main() {
 								Value: "",
 							},
 							&cli.StringFlag{
+								Name:  "region",
+								Usage: "AWS region",
+								Value: "eu-north-1",
+							},
+							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
 							},
@@ -1480,6 +1485,8 @@ func main() {
 							filterPattern := c.String("filter-pattern")
 
 							sess := session.NewSessionWithSharedProfile(profile)
+							reg := c.String("region")
+							sess.Config.Region = aws.String(reg)
 
 							cwlc := cloudwatchlogs.New(sess)
 
