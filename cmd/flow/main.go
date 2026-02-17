@@ -1473,6 +1473,11 @@ func main() {
 								Usage: "AWS region",
 								Value: "eu-north-1",
 							},
+							&cli.Int64Flag{
+								Name:  "start-time",
+								Usage: "start time in unix format",
+								Value: 0,
+							},
 							&cli.StringFlag{
 								Name:  "profile",
 								Value: "",
@@ -1483,6 +1488,7 @@ func main() {
 							logGroupName := c.String("log-group-name")
 							fileName := c.String("file-name")
 							filterPattern := c.String("filter-pattern")
+							startTime := c.Int64("start-time")
 
 							sess := session.NewSessionWithSharedProfile(profile)
 							reg := c.String("region")
@@ -1493,6 +1499,7 @@ func main() {
 							params := cloudwatchlogs.FilterLogEventsInput{
 								LogGroupName:  &logGroupName,
 								FilterPattern: &filterPattern,
+								StartTime:     &startTime,
 							}
 
 							pageNum := 0
@@ -3445,7 +3452,7 @@ func main() {
 							}
 							fmt.Printf("running: %s\n", uccmd.String())
 							if err := uccmd.Run(); err != nil {
-								return errors.Wrapf(err, uccmd.String())
+								return errors.Wrapf(err, "%s", uccmd.String())
 							}
 
 							// open in browser
@@ -3456,7 +3463,7 @@ func main() {
 							ocmd := exec.Command("open", purl.String())
 							fmt.Printf("running: %s\n", ocmd.String())
 							if err := ocmd.Start(); err != nil {
-								fmt.Printf("%v\n", errors.Wrapf(err, ocmd.String()))
+								fmt.Printf("%v\n", errors.Wrapf(err, "%s", ocmd.String()))
 								fmt.Printf("open in browser (use token from above to authenticate): \n%s\n", purl.String())
 							}
 
@@ -3466,7 +3473,7 @@ func main() {
 							output, err := kpcmd.CombinedOutput()
 							if err != nil {
 								fmt.Printf("%v\n", string(output))
-								return errors.Wrapf(err, kpcmd.String())
+								return errors.Wrapf(err, "%s", kpcmd.String())
 							}
 
 							return nil
