@@ -127,14 +127,9 @@ func (ss *saramaService) Produce(ctx context.Context, topic string, msg Message)
 			fmt.Printf("error when sending(%s)\n", e.Error())
 			return errors.Wrapf(e, "producer err")
 		case <-ctx.Done():
-			err := ss.producer.Close()
-			if err != nil {
-				return err
-			}
+			return ss.producer.Close()
 		}
 	}
-
-	return nil
 }
 
 func (ss *saramaService) Pipe(ctx context.Context, c <-chan Message, topic string) error {
