@@ -34,6 +34,20 @@ func (m *MockClusterAdmin) EXPECT() *MockClusterAdminMockRecorder {
 	return m.recorder
 }
 
+// AlterClientQuotas mocks base method.
+func (m *MockClusterAdmin) AlterClientQuotas(arg0 []sarama.QuotaEntityComponent, arg1 sarama.ClientQuotasOp, arg2 bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AlterClientQuotas", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AlterClientQuotas indicates an expected call of AlterClientQuotas.
+func (mr *MockClusterAdminMockRecorder) AlterClientQuotas(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AlterClientQuotas", reflect.TypeOf((*MockClusterAdmin)(nil).AlterClientQuotas), arg0, arg1, arg2)
+}
+
 // AlterConfig mocks base method.
 func (m *MockClusterAdmin) AlterConfig(arg0 sarama.ConfigResourceType, arg1 string, arg2 map[string]*string, arg3 bool) error {
 	m.ctrl.T.Helper()
@@ -46,6 +60,20 @@ func (m *MockClusterAdmin) AlterConfig(arg0 sarama.ConfigResourceType, arg1 stri
 func (mr *MockClusterAdminMockRecorder) AlterConfig(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AlterConfig", reflect.TypeOf((*MockClusterAdmin)(nil).AlterConfig), arg0, arg1, arg2, arg3)
+}
+
+// AlterPartitionReassignments mocks base method.
+func (m *MockClusterAdmin) AlterPartitionReassignments(arg0 string, arg1 [][]int32) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AlterPartitionReassignments", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AlterPartitionReassignments indicates an expected call of AlterPartitionReassignments.
+func (mr *MockClusterAdminMockRecorder) AlterPartitionReassignments(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AlterPartitionReassignments", reflect.TypeOf((*MockClusterAdmin)(nil).AlterPartitionReassignments), arg0, arg1)
 }
 
 // Close mocks base method.
@@ -62,6 +90,21 @@ func (mr *MockClusterAdminMockRecorder) Close() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockClusterAdmin)(nil).Close))
 }
 
+// Controller mocks base method.
+func (m *MockClusterAdmin) Controller() (*sarama.Broker, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Controller")
+	ret0, _ := ret[0].(*sarama.Broker)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Controller indicates an expected call of Controller.
+func (mr *MockClusterAdminMockRecorder) Controller() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Controller", reflect.TypeOf((*MockClusterAdmin)(nil).Controller))
+}
+
 // CreateACL mocks base method.
 func (m *MockClusterAdmin) CreateACL(arg0 sarama.Resource, arg1 sarama.Acl) error {
 	m.ctrl.T.Helper()
@@ -74,6 +117,20 @@ func (m *MockClusterAdmin) CreateACL(arg0 sarama.Resource, arg1 sarama.Acl) erro
 func (mr *MockClusterAdminMockRecorder) CreateACL(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateACL", reflect.TypeOf((*MockClusterAdmin)(nil).CreateACL), arg0, arg1)
+}
+
+// CreateACLs mocks base method.
+func (m *MockClusterAdmin) CreateACLs(arg0 []*sarama.ResourceAcls) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateACLs", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateACLs indicates an expected call of CreateACLs.
+func (mr *MockClusterAdminMockRecorder) CreateACLs(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateACLs", reflect.TypeOf((*MockClusterAdmin)(nil).CreateACLs), arg0)
 }
 
 // CreatePartitions mocks base method.
@@ -133,6 +190,20 @@ func (mr *MockClusterAdminMockRecorder) DeleteConsumerGroup(arg0 interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteConsumerGroup", reflect.TypeOf((*MockClusterAdmin)(nil).DeleteConsumerGroup), arg0)
 }
 
+// DeleteConsumerGroupOffset mocks base method.
+func (m *MockClusterAdmin) DeleteConsumerGroupOffset(arg0, arg1 string, arg2 int32) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteConsumerGroupOffset", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteConsumerGroupOffset indicates an expected call of DeleteConsumerGroupOffset.
+func (mr *MockClusterAdminMockRecorder) DeleteConsumerGroupOffset(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteConsumerGroupOffset", reflect.TypeOf((*MockClusterAdmin)(nil).DeleteConsumerGroupOffset), arg0, arg1, arg2)
+}
+
 // DeleteRecords mocks base method.
 func (m *MockClusterAdmin) DeleteRecords(arg0 string, arg1 map[int32]int64) error {
 	m.ctrl.T.Helper()
@@ -159,6 +230,36 @@ func (m *MockClusterAdmin) DeleteTopic(arg0 string) error {
 func (mr *MockClusterAdminMockRecorder) DeleteTopic(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTopic", reflect.TypeOf((*MockClusterAdmin)(nil).DeleteTopic), arg0)
+}
+
+// DeleteUserScramCredentials mocks base method.
+func (m *MockClusterAdmin) DeleteUserScramCredentials(arg0 []sarama.AlterUserScramCredentialsDelete) ([]*sarama.AlterUserScramCredentialsResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteUserScramCredentials", arg0)
+	ret0, _ := ret[0].([]*sarama.AlterUserScramCredentialsResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteUserScramCredentials indicates an expected call of DeleteUserScramCredentials.
+func (mr *MockClusterAdminMockRecorder) DeleteUserScramCredentials(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteUserScramCredentials", reflect.TypeOf((*MockClusterAdmin)(nil).DeleteUserScramCredentials), arg0)
+}
+
+// DescribeClientQuotas mocks base method.
+func (m *MockClusterAdmin) DescribeClientQuotas(arg0 []sarama.QuotaFilterComponent, arg1 bool) ([]sarama.DescribeClientQuotasEntry, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeClientQuotas", arg0, arg1)
+	ret0, _ := ret[0].([]sarama.DescribeClientQuotasEntry)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeClientQuotas indicates an expected call of DescribeClientQuotas.
+func (mr *MockClusterAdminMockRecorder) DescribeClientQuotas(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeClientQuotas", reflect.TypeOf((*MockClusterAdmin)(nil).DescribeClientQuotas), arg0, arg1)
 }
 
 // DescribeCluster mocks base method.
@@ -207,6 +308,21 @@ func (mr *MockClusterAdminMockRecorder) DescribeConsumerGroups(arg0 interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeConsumerGroups", reflect.TypeOf((*MockClusterAdmin)(nil).DescribeConsumerGroups), arg0)
 }
 
+// DescribeLogDirs mocks base method.
+func (m *MockClusterAdmin) DescribeLogDirs(arg0 []int32) (map[int32][]sarama.DescribeLogDirsResponseDirMetadata, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeLogDirs", arg0)
+	ret0, _ := ret[0].(map[int32][]sarama.DescribeLogDirsResponseDirMetadata)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeLogDirs indicates an expected call of DescribeLogDirs.
+func (mr *MockClusterAdminMockRecorder) DescribeLogDirs(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeLogDirs", reflect.TypeOf((*MockClusterAdmin)(nil).DescribeLogDirs), arg0)
+}
+
 // DescribeTopics mocks base method.
 func (m *MockClusterAdmin) DescribeTopics(arg0 []string) ([]*sarama.TopicMetadata, error) {
 	m.ctrl.T.Helper()
@@ -220,6 +336,35 @@ func (m *MockClusterAdmin) DescribeTopics(arg0 []string) ([]*sarama.TopicMetadat
 func (mr *MockClusterAdminMockRecorder) DescribeTopics(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeTopics", reflect.TypeOf((*MockClusterAdmin)(nil).DescribeTopics), arg0)
+}
+
+// DescribeUserScramCredentials mocks base method.
+func (m *MockClusterAdmin) DescribeUserScramCredentials(arg0 []string) ([]*sarama.DescribeUserScramCredentialsResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeUserScramCredentials", arg0)
+	ret0, _ := ret[0].([]*sarama.DescribeUserScramCredentialsResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeUserScramCredentials indicates an expected call of DescribeUserScramCredentials.
+func (mr *MockClusterAdminMockRecorder) DescribeUserScramCredentials(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeUserScramCredentials", reflect.TypeOf((*MockClusterAdmin)(nil).DescribeUserScramCredentials), arg0)
+}
+
+// IncrementalAlterConfig mocks base method.
+func (m *MockClusterAdmin) IncrementalAlterConfig(arg0 sarama.ConfigResourceType, arg1 string, arg2 map[string]sarama.IncrementalAlterConfigsEntry, arg3 bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IncrementalAlterConfig", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// IncrementalAlterConfig indicates an expected call of IncrementalAlterConfig.
+func (mr *MockClusterAdminMockRecorder) IncrementalAlterConfig(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IncrementalAlterConfig", reflect.TypeOf((*MockClusterAdmin)(nil).IncrementalAlterConfig), arg0, arg1, arg2, arg3)
 }
 
 // ListAcls mocks base method.
@@ -267,6 +412,21 @@ func (mr *MockClusterAdminMockRecorder) ListConsumerGroups() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListConsumerGroups", reflect.TypeOf((*MockClusterAdmin)(nil).ListConsumerGroups))
 }
 
+// ListPartitionReassignments mocks base method.
+func (m *MockClusterAdmin) ListPartitionReassignments(arg0 string, arg1 []int32) (map[string]map[int32]*sarama.PartitionReplicaReassignmentsStatus, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPartitionReassignments", arg0, arg1)
+	ret0, _ := ret[0].(map[string]map[int32]*sarama.PartitionReplicaReassignmentsStatus)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListPartitionReassignments indicates an expected call of ListPartitionReassignments.
+func (mr *MockClusterAdminMockRecorder) ListPartitionReassignments(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPartitionReassignments", reflect.TypeOf((*MockClusterAdmin)(nil).ListPartitionReassignments), arg0, arg1)
+}
+
 // ListTopics mocks base method.
 func (m *MockClusterAdmin) ListTopics() (map[string]sarama.TopicDetail, error) {
 	m.ctrl.T.Helper()
@@ -280,4 +440,34 @@ func (m *MockClusterAdmin) ListTopics() (map[string]sarama.TopicDetail, error) {
 func (mr *MockClusterAdminMockRecorder) ListTopics() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTopics", reflect.TypeOf((*MockClusterAdmin)(nil).ListTopics))
+}
+
+// RemoveMemberFromConsumerGroup mocks base method.
+func (m *MockClusterAdmin) RemoveMemberFromConsumerGroup(arg0 string, arg1 []string) (*sarama.LeaveGroupResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveMemberFromConsumerGroup", arg0, arg1)
+	ret0, _ := ret[0].(*sarama.LeaveGroupResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RemoveMemberFromConsumerGroup indicates an expected call of RemoveMemberFromConsumerGroup.
+func (mr *MockClusterAdminMockRecorder) RemoveMemberFromConsumerGroup(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveMemberFromConsumerGroup", reflect.TypeOf((*MockClusterAdmin)(nil).RemoveMemberFromConsumerGroup), arg0, arg1)
+}
+
+// UpsertUserScramCredentials mocks base method.
+func (m *MockClusterAdmin) UpsertUserScramCredentials(arg0 []sarama.AlterUserScramCredentialsUpsert) ([]*sarama.AlterUserScramCredentialsResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpsertUserScramCredentials", arg0)
+	ret0, _ := ret[0].([]*sarama.AlterUserScramCredentialsResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpsertUserScramCredentials indicates an expected call of UpsertUserScramCredentials.
+func (mr *MockClusterAdminMockRecorder) UpsertUserScramCredentials(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertUserScramCredentials", reflect.TypeOf((*MockClusterAdmin)(nil).UpsertUserScramCredentials), arg0)
 }

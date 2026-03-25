@@ -6,30 +6,20 @@ import (
 	"fmt"
 )
 
-// NewPubSubClient creates new client for a given projectID.
 func NewPubSubClient(ctx context.Context, projectID string) (*pubsub.Client, error) {
 	return pubsub.NewClient(ctx, projectID)
 }
 
-// CreateTopic creates topic.
 func CreateTopic(ctx context.Context, client *pubsub.Client, topic string) error {
 	_, err := client.CreateTopic(ctx, topic)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
-// CreateSubscription creates subscription for the topic.
 func CreateSubscription(ctx context.Context, client *pubsub.Client, topic string, subs string) error {
 	_, err := client.CreateSubscription(ctx, subs, pubsub.SubscriptionConfig{Topic: client.Topic(topic)})
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
-// Publish the message to the topic.
 func Publish(ctx context.Context, client *pubsub.Client, topic string, msg string, attr map[string]string) error {
 	m := pubsub.Message{
 		Data: []byte(msg),

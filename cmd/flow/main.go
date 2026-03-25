@@ -31,7 +31,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/sts"
-	flowbase64 "github.com/flow-lab/flow/internal/base64"
 	"github.com/flow-lab/flow/internal/creds"
 	flowdynamo "github.com/flow-lab/flow/internal/dynamodb"
 	flowkafka "github.com/flow-lab/flow/internal/kafka"
@@ -148,10 +147,7 @@ func main() {
 								return fmt.Errorf("table-name is required")
 							}
 
-							fc, err := flowdynamo.NewFlowDynamoDBClient(ddbc)
-							if err != nil {
-								return err
-							}
+							fc := flowdynamo.NewFlowDynamoDBClient(ddbc)
 
 							var filterExpressionPtr *string
 							if filterExpression != "" {
@@ -300,7 +296,7 @@ func main() {
 							nrOfItems := 0
 							err := ddbc.ScanPages(&params, func(output *dynamodb.ScanOutput, b bool) bool {
 								nrOfItems += len(output.Items)
-								return b == false
+								return !b
 							})
 
 							fmt.Printf("nr of items: %v", nrOfItems)
@@ -347,7 +343,7 @@ func main() {
 								fmt.Printf("Error when opening %v \n", input)
 								return err
 							}
-							defer jsonFile.Close()
+							defer func() { _ = jsonFile.Close() }()
 
 							byteValue, _ := io.ReadAll(jsonFile)
 							err = json.Unmarshal(byteValue, &items)
@@ -439,7 +435,7 @@ func main() {
 								fmt.Printf("Error when opening %v \n", input)
 								return err
 							}
-							defer jsonFile.Close()
+							defer func() { _ = jsonFile.Close() }()
 
 							byteValue, _ := io.ReadAll(jsonFile)
 							err = json.Unmarshal(byteValue, &items)
@@ -544,7 +540,7 @@ func main() {
 								fmt.Printf("Error when opening %v \n", keys)
 								return err
 							}
-							defer jsonFile.Close()
+							defer func() { _ = jsonFile.Close() }()
 
 							byteValue, _ := io.ReadAll(jsonFile)
 							err = json.Unmarshal(byteValue, &items)
@@ -561,7 +557,7 @@ func main() {
 							}
 
 							writer := bufio.NewWriter(os.Stdout)
-							defer writer.Flush()
+							defer func() { _ = writer.Flush() }()
 							if !shouldWriteToFile {
 								if _, err := writer.Write([]byte("[")); err != nil {
 									return err
@@ -611,7 +607,7 @@ func main() {
 										if !shouldWriteToFile {
 											if *queryOutput.Count > 0 && itemsBefore {
 												if _, err := writer.Write([]byte(",")); err != nil {
-													panic(err)
+													return err
 												}
 											}
 										}
@@ -621,19 +617,17 @@ func main() {
 											if shouldWriteToFile {
 												results = append(results, item)
 											} else {
-												if j, err := json.Marshal(item); err == nil {
-													if _, err := writer.Write(j); err != nil {
-														fmt.Printf("%v", item)
-														panic(err)
-													}
-												} else {
-													fmt.Printf("%v", item)
-													panic("unable to marshal")
+												j, err := json.Marshal(item)
+												if err != nil {
+													return fmt.Errorf("unable to marshal: %w", err)
+												}
+												if _, err := writer.Write(j); err != nil {
+													return err
 												}
 
 												if i < len(queryOutput.Items)-1 {
 													if _, err := writer.Write([]byte(",")); err != nil {
-														panic(err)
+														return err
 													}
 												}
 											}
@@ -648,17 +642,14 @@ func main() {
 							}
 
 							if shouldWriteToFile {
-								var jso []byte
-								var werr error
-								if jso, werr = json.Marshal(results); werr == nil {
-									if err := os.WriteFile(fileName, jso, 0644); err != nil {
-										return err
-									}
-									fmt.Printf("result wrote to: %v", fileName)
-								} else {
-									fmt.Printf("%v", werr)
-									panic("unable to write to file")
+								jso, err := json.Marshal(results)
+								if err != nil {
+									return fmt.Errorf("unable to marshal results: %w", err)
 								}
+								if err := os.WriteFile(fileName, jso, 0644); err != nil {
+									return err
+								}
+								fmt.Printf("result wrote to: %v", fileName)
 							} else {
 								if _, err := writer.Write([]byte("]")); err != nil {
 									return err
@@ -782,7 +773,7 @@ func main() {
 							}
 
 							writer := bufio.NewWriter(os.Stdout)
-							defer writer.Flush()
+							defer func() { _ = writer.Flush() }()
 							if !shouldWriteToFile {
 								if _, err := writer.Write([]byte("[")); err != nil {
 									return err
@@ -795,53 +786,47 @@ func main() {
 									// let's try to stream in comma
 									if itemsBefore && !shouldWriteToFile {
 										if _, err := writer.Write([]byte(",")); err != nil {
-											panic(err)
+											return false
 										}
 									}
-									// ok, there is one record in the list before
 									itemsBefore = true
 
 									for i, elem := range output.Items {
 										if shouldWriteToFile {
 											l = append(l, elem)
 										} else {
-											if j, err := json.Marshal(elem); err == nil {
-												if _, err := writer.Write(j); err != nil {
-													fmt.Printf("%v", elem)
-													panic(err)
-												}
-											} else {
-												fmt.Printf("%v", elem)
-												panic("unable to marshal")
+											j, err := json.Marshal(elem)
+											if err != nil {
+												return false
+											}
+											if _, err := writer.Write(j); err != nil {
+												return false
 											}
 
 											if i < len(output.Items)-1 {
 												if _, err := writer.Write([]byte(",")); err != nil {
-													panic(err)
+													return false
 												}
 											}
 										}
 									}
 								}
 
-								return lastPage == false
+								return !lastPage
 							})
 							if err != nil {
 								return err
 							}
 
 							if shouldWriteToFile {
-								var jso []byte
-								var werr error
-								if jso, werr = json.Marshal(l); werr == nil {
-									if err := os.WriteFile(fileName, jso, 0644); err != nil {
-										return err
-									}
-									fmt.Printf("result wrote to: %v", fileName)
-								} else {
-									fmt.Printf("%v", werr)
-									panic("unable to write to file")
+								jso, err := json.Marshal(l)
+								if err != nil {
+									return fmt.Errorf("unable to marshal results: %w", err)
 								}
+								if err := os.WriteFile(fileName, jso, 0644); err != nil {
+									return err
+								}
+								fmt.Printf("result wrote to: %v", fileName)
 							} else {
 								if _, err := writer.Write([]byte("]")); err != nil {
 									return err
@@ -936,9 +921,9 @@ func main() {
 										}
 										output, err := ddbc.DeleteBackup(deleteBackupInput)
 										if err != nil {
-											panic(err)
+											return err
 										}
-										//we need to sleep a bit, max 10 times per second
+										time.Sleep(time.Duration(100) * time.Millisecond)
 										time.Sleep(time.Duration(100) * time.Millisecond)
 										fmt.Printf("deleted: %v \n", *output.BackupDescription.BackupDetails)
 									}
@@ -1048,7 +1033,7 @@ func main() {
 								if err != nil {
 									return err
 								}
-								defer jsonFile.Close()
+								defer func() { _ = jsonFile.Close() }()
 							} else {
 								byteValue = []byte(inputStr)
 							}
@@ -1232,9 +1217,7 @@ func main() {
 								}
 							}()
 
-							select {
-							case <-ctx.Done():
-							}
+							<-ctx.Done()
 
 							return nil
 						},
@@ -1269,11 +1252,7 @@ func main() {
 							}
 
 							sqsc := sqs.New(sess)
-							client, err := flowsqs.NewSQSClient(sqsc)
-							if err != nil {
-								return err
-							}
-
+							client := flowsqs.NewSQSClient(sqsc)
 							return client.Delete(context.Background(), queueName, receiptHandles)
 						},
 					},
@@ -1333,7 +1312,7 @@ func main() {
 							}
 							for _, topic := range out.Topics {
 								if strings.Contains(*topic.TopicArn, topicName) {
-									for i := 0; i < times; i++ {
+									for range times {
 										wg.Add(1)
 										go func(topicArn string) {
 											defer wg.Done()
@@ -1502,15 +1481,14 @@ func main() {
 								StartTime:     &startTime,
 							}
 
-							pageNum := 0
 							var logEvents []*cloudwatchlogs.FilteredLogEvent
 							err := cwlc.FilterLogEventsPages(&params, func(page *cloudwatchlogs.FilterLogEventsOutput, lastPage bool) bool {
-								pageNum++
-								for _, event := range page.Events {
-									logEvents = append(logEvents, event)
-								}
-								return lastPage == false
+								logEvents = append(logEvents, page.Events...)
+								return !lastPage
 							})
+							if err != nil {
+								return err
+							}
 
 							b, _ := json.Marshal(logEvents)
 							err = os.WriteFile(fileName, b, 0644)
@@ -1715,12 +1693,8 @@ func main() {
 									return errors.Wrap(err, "Describe failed")
 								}
 
-								for _, logGroup := range describe {
-									// find first matching the prefix
-									if strings.Contains(*logGroup.LogGroupName, logGroupNamePrefix) {
-										logGroupNamePrefix = *logGroup.LogGroupName
-									}
-									break
+								if len(describe) > 0 && strings.Contains(*describe[0].LogGroupName, logGroupNamePrefix) {
+									logGroupNamePrefix = *describe[0].LogGroupName
 								}
 							}
 
@@ -1729,17 +1703,17 @@ func main() {
 
 							// create file name with start and end time in UTC
 							start := startTime.UTC().Format("2006-01-02T15:04:05")
-							start = strings.Replace(start, ":", "", -1)
-							start = strings.Replace(start, "-", "", -1)
+							start = strings.ReplaceAll(start, ":", "")
+							start = strings.ReplaceAll(start, "-", "")
 							end := endTime.UTC().Format("2006-01-02T15:04:05")
-							end = strings.Replace(end, ":", "", -1)
-							end = strings.Replace(end, "-", "", -1)
+							end = strings.ReplaceAll(end, ":", "")
+							end = strings.ReplaceAll(end, "-", "")
 							fileName := fmt.Sprintf("%s-%sZ-%sZ.csv", c.String("file-name-prefix"), start, end)
 							file, err := os.Create(fileName)
 							if err != nil {
 								return errors.Wrap(err, "failed to create file")
 							}
-							defer file.Close()
+							defer func() { _ = file.Close() }()
 
 							writer := csv.NewWriter(file)
 							defer writer.Flush()
@@ -1801,7 +1775,7 @@ func main() {
 										ParameterValue:    out.Parameter,
 									})
 								}
-								return lastPage == false
+								return !lastPage
 							})
 							if err != nil {
 								return err
@@ -1852,7 +1826,7 @@ func main() {
 							}
 							getSecretValueOutput, err := ssmc.GetSecretValue(&getSecretValueInput)
 							if err != nil {
-								panic(err)
+								return err
 							}
 
 							fmt.Printf("%v", getSecretValueOutput)
@@ -1890,7 +1864,7 @@ func main() {
 									}
 									getSecretValueOutput, err := ssmc.GetSecretValue(&getSecretValueInput)
 									if err != nil {
-										panic(err)
+										return false
 									}
 
 									entries = append(entries, &SecretOutput{
@@ -1898,11 +1872,11 @@ func main() {
 										Value: getSecretValueOutput,
 									})
 								}
-								return lastPage == false
+								return !lastPage
 							})
 
 							if err != nil {
-								panic(err)
+								return err
 							}
 
 							if entries == nil {
@@ -1941,15 +1915,15 @@ func main() {
 									}
 									_, err := ssmc.DeleteSecret(&deleteSecretInput)
 									if err != nil {
-										panic(err)
+										return false
 									}
 									fmt.Printf("deleted: %v\n", &elem.Name)
 								}
-								return lastPage == false
+								return !lastPage
 							})
 
 							if err != nil {
-								panic(err)
+								return err
 							}
 
 							return nil
@@ -1978,7 +1952,7 @@ func main() {
 							if err != nil {
 								return fmt.Errorf("error when opening %s", inFileName)
 							}
-							defer jsonFile.Close()
+							defer func() { _ = jsonFile.Close() }()
 
 							ssmc := secretsmanager.New(sess)
 
@@ -1994,7 +1968,7 @@ func main() {
 								}
 								_, err := ssmc.RestoreSecret(&restoreInput)
 								if err != nil {
-									panic(err)
+									return err
 								}
 								fmt.Printf("restored: %s\n", secret.Name)
 							}
@@ -2026,7 +2000,7 @@ func main() {
 							if err != nil {
 								return fmt.Errorf("error when opening %s", inFileName)
 							}
-							defer jsonFile.Close()
+							defer func() { _ = jsonFile.Close() }()
 
 							var secrets []*Secret
 							byteValue, _ := io.ReadAll(jsonFile)
@@ -2034,34 +2008,30 @@ func main() {
 								return err
 							}
 
-							var inputs []*secretsmanager.CreateSecretInput
+							sm := secretsmanager.New(sess)
+
 							for _, secret := range secrets {
-								if secret.Type == "value" || secret.Type == "password" {
-									input := secretsmanager.CreateSecretInput{
+								var input secretsmanager.CreateSecretInput
+								switch secret.Type {
+								case "value", "password":
+									input = secretsmanager.CreateSecretInput{
 										Name:         aws.String(secret.Name),
 										SecretString: aws.String(secret.Value),
 									}
-									inputs = append(inputs, &input)
-								} else if secret.Type == "rsa" {
-									var rsa []byte
-									if rsa, err = json.Marshal(secret.RSAValue); err != nil {
+								case "rsa":
+									rsa, err := json.Marshal(secret.RSAValue)
+									if err != nil {
 										return err
 									}
-
-									input := secretsmanager.CreateSecretInput{
+									input = secretsmanager.CreateSecretInput{
 										Name:         aws.String(secret.Name),
 										SecretBinary: rsa,
 									}
-									inputs = append(inputs, &input)
-								} else {
-									fmt.Printf("unable to process version: %v", secret.Type)
+								default:
+									fmt.Printf("unable to process version: %v\n", secret.Type)
+									continue
 								}
-							}
-
-							sm := secretsmanager.New(sess)
-
-							for _, input := range inputs {
-								if _, err := sm.CreateSecret(input); err != nil {
+								if _, err := sm.CreateSecret(&input); err != nil {
 									return err
 								}
 							}
@@ -2094,7 +2064,7 @@ func main() {
 							if err != nil {
 								return fmt.Errorf("error when opening %s", inFileName)
 							}
-							defer jsonFile.Close()
+							defer func() { _ = jsonFile.Close() }()
 
 							var secrets []*Secret
 							byteValue, _ := io.ReadAll(jsonFile)
@@ -2102,34 +2072,30 @@ func main() {
 								return err
 							}
 
-							var inputs []*secretsmanager.UpdateSecretInput
+							sm := secretsmanager.New(sess)
+
 							for _, secret := range secrets {
-								if secret.Type == "value" || secret.Type == "password" {
-									input := secretsmanager.UpdateSecretInput{
+								var input secretsmanager.UpdateSecretInput
+								switch secret.Type {
+								case "value", "password":
+									input = secretsmanager.UpdateSecretInput{
 										SecretId:     aws.String(secret.Name),
 										SecretString: aws.String(secret.Value),
 									}
-									inputs = append(inputs, &input)
-								} else if secret.Type == "rsa" {
-									var rsa []byte
-									if rsa, err = json.Marshal(secret.RSAValue); err != nil {
+								case "rsa":
+									rsa, err := json.Marshal(secret.RSAValue)
+									if err != nil {
 										return err
 									}
-
-									input := secretsmanager.UpdateSecretInput{
+									input = secretsmanager.UpdateSecretInput{
 										SecretId:     aws.String(secret.Name),
 										SecretBinary: rsa,
 									}
-									inputs = append(inputs, &input)
-								} else {
-									fmt.Printf("unable to process version: %v", secret.Type)
+								default:
+									fmt.Printf("unable to process version: %v\n", secret.Type)
+									continue
 								}
-							}
-
-							sm := secretsmanager.New(sess)
-
-							for _, input := range inputs {
-								if _, err := sm.UpdateSecret(input); err != nil {
+								if _, err := sm.UpdateSecret(&input); err != nil {
 									return err
 								}
 							}
@@ -2216,8 +2182,7 @@ func main() {
 							}
 
 							if input != "" {
-								encode := flowbase64.Encode(input)
-								fmt.Println(string(encode))
+								fmt.Println(base64.StdEncoding.EncodeToString([]byte(input)))
 							}
 
 							if file != "" {
@@ -2225,8 +2190,7 @@ func main() {
 								if err != nil {
 									return err
 								}
-								encode := flowbase64.Encode(string(b))
-								fmt.Println(string(encode))
+								fmt.Println(base64.StdEncoding.EncodeToString(b))
 							}
 
 							return nil
@@ -2247,9 +2211,9 @@ func main() {
 								return fmt.Errorf("missing --input")
 							}
 
-							b64Bytes, err := flowbase64.Decode(input)
+							b64Bytes, err := base64.StdEncoding.DecodeString(input)
 							if err != nil {
-								return fmt.Errorf("call to Decode failed: %s", err)
+								return fmt.Errorf("base64 decode failed: %w", err)
 							}
 							fmt.Println(string(b64Bytes))
 
@@ -2340,7 +2304,7 @@ func main() {
 									}
 									_, err := s3c.DeleteObjects(&deleteObjectsInput)
 									if err != nil {
-										panic(err)
+										return false
 									}
 									fmt.Printf("deleted: %v\n", objectIdentifiers)
 								}
@@ -2422,7 +2386,7 @@ func main() {
 										}
 
 										var destFileName string
-										name := strings.Replace(*restAPI.Name, " ", "", -1)
+										name := strings.ReplaceAll(*restAPI.Name, " ", "")
 										if restAPI.Version != nil {
 											destFileName = fmt.Sprintf("%s-%s.%s.yml", name, *restAPI.Version, exportType)
 										} else {
@@ -2679,9 +2643,12 @@ func main() {
 								return fmt.Errorf("getBootstrapBroker failed: %s", err)
 							}
 
-							fk := flowkafka.NewFlowKafka(&flowkafka.ServiceConfig{
+							fk, err := flowkafka.NewFlowKafka(&flowkafka.ServiceConfig{
 								BootstrapBroker: *bb,
 							})
+							if err != nil {
+								return err
+							}
 							return fk.Produce(c.Context, topic, flowkafka.Message{Value: []byte(msg)})
 						},
 					},
@@ -2721,16 +2688,25 @@ func main() {
 							dbb := c.String("dst-bootstrap-broker")
 							dt := c.String("dst-topic")
 
-							sfk := flowkafka.NewFlowKafka(&flowkafka.ServiceConfig{BootstrapBroker: sbb})
-							dfk := flowkafka.NewFlowKafka(&flowkafka.ServiceConfig{BootstrapBroker: dbb})
+							sfk, err := flowkafka.NewFlowKafka(&flowkafka.ServiceConfig{BootstrapBroker: sbb})
+							if err != nil {
+								return err
+							}
+							dfk, err := flowkafka.NewFlowKafka(&flowkafka.ServiceConfig{BootstrapBroker: dbb})
+							if err != nil {
+								return err
+							}
 
 							signals := make(chan os.Signal, 1)
-							signal.Notify(signals, os.Interrupt, os.Kill)
+							signal.Notify(signals, os.Interrupt)
 
 							cCtx, cancelFunc := context.WithCancel(c.Context)
 							defer cancelFunc()
-							rc := sfk.Read(cCtx, st, 10000)
-							err := dfk.Pipe(cCtx, rc, dt)
+							rc, err := sfk.Read(cCtx, st, 10000)
+							if err != nil {
+								return err
+							}
+							err = dfk.Pipe(cCtx, rc, dt)
 							if err != nil {
 								return errors.Wrapf(err, "produce")
 							}
@@ -2758,7 +2734,10 @@ func main() {
 						},
 						Action: func(c *cli.Context) error {
 							sbb := c.String("bootstrap-broker")
-							fk := flowkafka.NewFlowKafka(&flowkafka.ServiceConfig{BootstrapBroker: sbb})
+							fk, err := flowkafka.NewFlowKafka(&flowkafka.ServiceConfig{BootstrapBroker: sbb})
+							if err != nil {
+								return err
+							}
 							brokers, err := fk.BrokerInfo(c.Context)
 							if err != nil {
 								return errors.Wrapf(err, "broker info")
@@ -2835,9 +2814,12 @@ func main() {
 							if err != nil {
 								return fmt.Errorf("getBootstrapBroker failed: %s", err)
 							}
-							ks := flowkafka.NewFlowKafka(&flowkafka.ServiceConfig{
+							ks, err := flowkafka.NewFlowKafka(&flowkafka.ServiceConfig{
 								BootstrapBroker: *bb,
 							})
+							if err != nil {
+								return err
+							}
 							return ks.CreateTopic(topic, numPartitions, replicationFactor, retentionMs)
 						},
 					},
@@ -2884,9 +2866,12 @@ func main() {
 							if err != nil {
 								return fmt.Errorf("getBootstrapBroker failed: %s", err)
 							}
-							fk := flowkafka.NewFlowKafka(&flowkafka.ServiceConfig{
+							fk, err := flowkafka.NewFlowKafka(&flowkafka.ServiceConfig{
 								BootstrapBroker: *bb,
 							})
+							if err != nil {
+								return err
+							}
 							return fk.DeleteTopic(topic)
 						},
 					},
@@ -2934,9 +2919,12 @@ func main() {
 							if err != nil {
 								return fmt.Errorf("getBootstrapBroker failed: %s", err)
 							}
-							fk := flowkafka.NewFlowKafka(&flowkafka.ServiceConfig{
+							fk, err := flowkafka.NewFlowKafka(&flowkafka.ServiceConfig{
 								BootstrapBroker: *bb,
 							})
+							if err != nil {
+								return err
+							}
 
 							var tr []*flowkafka.Topic
 							for _, t := range topic {
@@ -3016,12 +3004,12 @@ func main() {
 							sess := session.NewSessionWithSharedProfile(profile)
 							client := sts.New(sess)
 
-							err, cred := flowsts.AssumeRole(context.Background(), client, durationSeconds, roleSessName, roleArn, serialNr, tokenCode)
+							cred, err := flowsts.AssumeRole(context.Background(), client, durationSeconds, roleSessName, roleArn, serialNr, tokenCode)
 							if err != nil {
 								return errors.Wrapf(err, "assume role")
 							}
 
-							err, s := creds.GenerateEnv(region, *cred.AccessKeyId, *cred.SecretAccessKey, *cred.SessionToken)
+							s, err := creds.GenerateEnv(region, *cred.AccessKeyId, *cred.SecretAccessKey, *cred.SessionToken)
 							if err != nil {
 								return err
 							}
@@ -3071,12 +3059,12 @@ func main() {
 							sess := session.NewSessionWithSharedProfile(profile)
 							client := sts.New(sess)
 
-							err, cred := flowsts.GetSessionToken(context.Background(), client, durationSeconds, serialNr, tokenCode)
+							cred, err := flowsts.GetSessionToken(context.Background(), client, durationSeconds, serialNr, tokenCode)
 							if err != nil {
 								return errors.Wrapf(err, "get session token")
 							}
 
-							err, s := creds.GenerateEnv(region, *cred.AccessKeyId, *cred.SecretAccessKey, *cred.SessionToken)
+							s, err := creds.GenerateEnv(region, *cred.AccessKeyId, *cred.SecretAccessKey, *cred.SessionToken)
 							if err != nil {
 								return err
 							}
@@ -3329,7 +3317,8 @@ func main() {
 								if len(events) != 0 {
 									str, err := json.Marshal(events)
 									if err != nil {
-										panic(err)
+										fmt.Printf("failed to marshal events: %v\n", err)
+										return
 									}
 									fmt.Printf("%s", string(str))
 									return
@@ -3349,7 +3338,7 @@ func main() {
 										}
 									}
 								}
-								return b == true
+								return b
 							})
 							if err != nil {
 								return errors.Wrapf(err, "lookup events")
@@ -3517,12 +3506,15 @@ func main() {
 							ghToken := c.String("token")
 							ctx := context.Background()
 
-							client := NewGitHubClient(org, ghToken)
+							client, err := NewGitHubClient(org, ghToken)
+							if err != nil {
+								return err
+							}
 
 							page := 0
 							tagName := ""
 
-							for true {
+							for {
 								tags, _, err := client.Repositories.ListTags(ctx, org, repo, &github.ListOptions{
 									Page: page,
 								})
@@ -3685,7 +3677,7 @@ func main() {
 							if err != nil {
 								return errors.Wrap(err, "open file")
 							}
-							defer content.Close()
+							defer func() { _ = content.Close() }()
 
 							// create output in memory buffer
 							buf := new(bytes.Buffer)
@@ -3693,7 +3685,7 @@ func main() {
 							// Create JSON decoder for input file
 							decoder := json.NewDecoder(content)
 							writer := bufio.NewWriter(buf)
-							defer writer.Flush()
+							defer func() { _ = writer.Flush() }()
 
 							var objs []interface{}
 							if err := decoder.Decode(&objs); err != nil {
@@ -3706,7 +3698,7 @@ func main() {
 							for _, obj := range objs {
 								jsonBytes, err := json.Marshal(obj)
 								if err != nil {
-									panic(err)
+									return fmt.Errorf("marshal: %w", err)
 								}
 								_, err = writer.Write(jsonBytes)
 								if err != nil {
@@ -3718,8 +3710,9 @@ func main() {
 								}
 							}
 
-							// Flush the buffer to ensure all bytes are written
-							writer.Flush()
+							if err := writer.Flush(); err != nil {
+								return fmt.Errorf("flush: %w", err)
+							}
 
 							if outFile := c.String("out-file"); outFile != "" {
 								// write buf to the file
@@ -3788,7 +3781,7 @@ func main() {
 								}
 								return errors.Wrap(err, "create private key file")
 							}
-							defer privFile.Close()
+							defer func() { _ = privFile.Close() }()
 
 							privKeyBytes := x509.MarshalPKCS1PrivateKey(privateKey)
 							privPem := pem.EncodeToMemory(
@@ -3810,7 +3803,7 @@ func main() {
 								}
 								return errors.Wrap(err, "create public key file")
 							}
-							defer pubFile.Close()
+							defer func() { _ = pubFile.Close() }()
 
 							publicKey := privateKey.PublicKey
 
@@ -3852,7 +3845,7 @@ func main() {
 							if err != nil {
 								return errors.Wrap(err, "Failed to open certificate.pem for writing")
 							}
-							defer certFile.Close()
+							defer func() { _ = certFile.Close() }()
 
 							err = pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: certDER})
 							if err != nil {
@@ -3892,7 +3885,7 @@ func main() {
 								}
 								return errors.Wrap(err, "create jwk file")
 							}
-							defer jwkFile.Close()
+							defer func() { _ = jwkFile.Close() }()
 
 							if _, err := jwkFile.Write(jwkKeysJson); err != nil {
 								return errors.Wrap(err, "write jwk file")
@@ -3924,10 +3917,7 @@ func chunkFile(filePath string, chunkSize int) (string, [][]string, error) {
 		return "", nil, errors.Wrap(err, "read file")
 	}
 
-	rows := make([]string, 0)
-	for _, row := range strings.Split(string(content), "\n") {
-		rows = append(rows, row)
-	}
+	rows := strings.Split(string(content), "\n")
 
 	// read header
 	headerArr := rows[0]
@@ -3973,12 +3963,12 @@ func newClientset(cluster *eks.Cluster, sess *asession.Session) (*kubernetes.Cli
 	)
 }
 
-func NewGitHubClient(org string, accessToken string) *github.Client {
+func NewGitHubClient(org string, accessToken string) (*github.Client, error) {
 	if org == "" {
-		panic("org is required")
+		return nil, fmt.Errorf("org is required")
 	}
 	if accessToken == "" {
-		panic("accessToken is required")
+		return nil, fmt.Errorf("accessToken is required")
 	}
 	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(
@@ -3986,5 +3976,5 @@ func NewGitHubClient(org string, accessToken string) *github.Client {
 	)
 	tc := oauth2.NewClient(ctx, ts)
 
-	return github.NewClient(tc)
+	return github.NewClient(tc), nil
 }

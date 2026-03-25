@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ConfigEntry represents topic configuration.
 type ConfigEntry struct {
 	Name      string
 	Value     string
@@ -16,19 +15,16 @@ type ConfigEntry struct {
 	Sensitive bool
 }
 
-// Topic represents kafka topic.
 type Topic struct {
 	Name     string         `json:"name,omitempty"`
 	Configs  []*ConfigEntry `json:"configs,omitempty"`
 	ErrorMsg *string        `json:"errorMsg,omitempty"`
 }
 
-// Metadata represents topics details.
 type Metadata struct {
 	Topics []*Topic
 }
 
-// Broker represents kafka broker.
 type Broker struct {
 	ID   string `json:"id,omitempty"`
 	Addr string `json:"addr,omitempty"`
@@ -40,14 +36,13 @@ type config struct {
 	producer        sarama.AsyncProducer
 }
 
-// FlowKafka is an interface representing operations that can be executed with Kafka Cluster.
 type FlowKafka interface {
 	CreateTopic(topic string, numPartitions int, replicationFactor int, retentionMs string) error
 	DeleteTopic(topic string) error
 	DescribeTopic(topic string) (*Topic, error)
 	Pipe(ctx context.Context, c <-chan Message, topic string) error
 	Produce(ctx context.Context, topic string, msg Message) error
-	Read(ctx context.Context, topic string, bufferSize int) <-chan Message
+	Read(ctx context.Context, topic string, bufferSize int) (<-chan Message, error)
 	BrokerInfo(ctx context.Context) ([]Broker, error)
 }
 
@@ -57,10 +52,9 @@ type ServiceConfig struct {
 	clusterAdmin    sarama.ClusterAdmin
 }
 
-// NewFlowKafka create new instance of service
-func NewFlowKafka(c *ServiceConfig) FlowKafka {
+func NewFlowKafka(c *ServiceConfig) (FlowKafka, error) {
 	if c.BootstrapBroker == "" {
-		panic("bootstrapBrokers is required")
+		return nil, fmt.Errorf("bootstrapBrokers is required")
 	}
 
 	kv := sarama.V2_4_0_0
@@ -82,18 +76,16 @@ func NewFlowKafka(c *ServiceConfig) FlowKafka {
 	if c.clusterAdmin == nil {
 		config := sarama.NewConfig()
 		config.Version = kv
-		var addr []string
-		addr = append(addr, c.BootstrapBroker)
-		admin, err := sarama.NewClusterAdmin(addr, config)
+		admin, err := sarama.NewClusterAdmin([]string{c.BootstrapBroker}, config)
 		if err != nil {
-			panic(err)
+			return nil, fmt.Errorf("new cluster admin: %w", err)
 		}
 		ser.ClusterAdmin = admin
 	} else {
 		ser.ClusterAdmin = c.clusterAdmin
 	}
 
-	return ser
+	return ser, nil
 }
 
 type saramaService struct {
@@ -101,14 +93,21 @@ type saramaService struct {
 	sarama.ClusterAdmin
 }
 
-func (ss *saramaService) Produce(ctx context.Context, topic string, msg Message) error {
-	if ss.producer == nil {
-		producer, err := sarama.NewAsyncProducer([]string{ss.bootstrapBroker}, ss.saramaConfig)
-		if err != nil {
-			panic(err)
-		}
+func (ss *saramaService) ensureProducer() error {
+	if ss.producer != nil {
+		return nil
+	}
+	producer, err := sarama.NewAsyncProducer([]string{ss.bootstrapBroker}, ss.saramaConfig)
+	if err != nil {
+		return fmt.Errorf("new async producer: %w", err)
+	}
+	ss.producer = producer
+	return nil
+}
 
-		ss.producer = producer
+func (ss *saramaService) Produce(ctx context.Context, topic string, msg Message) error {
+	if err := ss.ensureProducer(); err != nil {
+		return err
 	}
 
 	pmsg := sarama.ProducerMessage{
@@ -133,13 +132,8 @@ func (ss *saramaService) Produce(ctx context.Context, topic string, msg Message)
 }
 
 func (ss *saramaService) Pipe(ctx context.Context, c <-chan Message, topic string) error {
-	if ss.producer == nil {
-		producer, err := sarama.NewAsyncProducer([]string{ss.bootstrapBroker}, ss.saramaConfig)
-		if err != nil {
-			panic(err)
-		}
-
-		ss.producer = producer
+	if err := ss.ensureProducer(); err != nil {
+		return err
 	}
 
 	go func() {
@@ -180,7 +174,7 @@ func (ss *saramaService) DeleteTopic(topic string) error {
 }
 
 func (ss *saramaService) DescribeTopic(topic string) (*Topic, error) {
-	entries, err := ss.ClusterAdmin.DescribeConfig(sarama.ConfigResource{
+	entries, err := ss.DescribeConfig(sarama.ConfigResource{
 		Type: sarama.TopicResource,
 		Name: topic,
 	})
@@ -210,61 +204,50 @@ type Message struct {
 	Key, Value []byte
 }
 
-func (ss *saramaService) Read(ctx context.Context, topic string, bufferSize int) <-chan Message {
+func (ss *saramaService) Read(ctx context.Context, topic string, bufferSize int) (<-chan Message, error) {
 	result := make(chan Message, bufferSize)
-	go func(result chan<- Message) {
-		// in case ctx is done cancel
-		select {
-		case <-ctx.Done():
-			return
-		default:
-		}
 
-		consumer, err := sarama.NewConsumer([]string{ss.bootstrapBroker}, ss.saramaConfig)
+	select {
+	case <-ctx.Done():
+		close(result)
+		return result, nil
+	default:
+	}
+
+	consumer, err := sarama.NewConsumer([]string{ss.bootstrapBroker}, ss.saramaConfig)
+	if err != nil {
+		return nil, fmt.Errorf("new consumer: %w", err)
+	}
+
+	partitions, err := consumer.Partitions(topic)
+	if err != nil {
+		_ = consumer.Close()
+		return nil, fmt.Errorf("get partitions: %w", err)
+	}
+
+	for _, p := range partitions {
+		pc, err := consumer.ConsumePartition(topic, p, 0)
 		if err != nil {
-			panic(err)
+			_ = consumer.Close()
+			return nil, fmt.Errorf("consume partition %d: %w", p, err)
 		}
 
-		partitions, err := consumer.Partitions(topic)
-		if err != nil {
-			panic(err)
-		}
-
-		consumers := make([]sarama.PartitionConsumer, len(partitions))
-		for i, p := range partitions {
-			c, err := consumer.ConsumePartition(topic, p, 0)
-			if err != nil {
-				panic(err)
-			}
-
-			// in case context is already done
-			select {
-			case <-ctx.Done():
-				return
-			default:
-			}
-
-			consumers[i] = c
-		}
-
-		for _, c := range consumers {
-			go func(pc sarama.PartitionConsumer) {
-				for {
-					select {
-					case msg := <-pc.Messages():
-						result <- Message{
-							Key:   msg.Key,
-							Value: msg.Value,
-						}
-					case <-ctx.Done():
-						return
+		go func(pc sarama.PartitionConsumer) {
+			for {
+				select {
+				case msg := <-pc.Messages():
+					result <- Message{
+						Key:   msg.Key,
+						Value: msg.Value,
 					}
+				case <-ctx.Done():
+					return
 				}
-			}(c)
-		}
-	}(result)
+			}
+		}(pc)
+	}
 
-	return result
+	return result, nil
 }
 
 func (ss *saramaService) BrokerInfo(_ context.Context) ([]Broker, error) {

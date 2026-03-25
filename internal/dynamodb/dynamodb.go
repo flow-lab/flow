@@ -18,10 +18,8 @@ type flowDynamoDBClient struct {
 	dynamodbiface.DynamoDBAPI
 }
 
-// NewFlowDynamoDBClient creates a new flow dynamoDB client.
-func NewFlowDynamoDBClient(d dynamodbiface.DynamoDBAPI) (FlowDynamoDBClient, error) {
-	client := flowDynamoDBClient{d}
-	return &client, nil
+func NewFlowDynamoDBClient(d dynamodbiface.DynamoDBAPI) FlowDynamoDBClient {
+	return &flowDynamoDBClient{d}
 }
 
 // Delete deletes items from table. Will use filterExpression and expressionAttributeValues if given to only delete
@@ -37,7 +35,7 @@ func (f *flowDynamoDBClient) Delete(ctx context.Context, tableName string, filte
 	describeTableInput := dynamodb.DescribeTableInput{
 		TableName: aws.String(tableName),
 	}
-	describeTableOutput, err := f.DynamoDBAPI.DescribeTableWithContext(ctx, &describeTableInput)
+	describeTableOutput, err := f.DescribeTableWithContext(ctx, &describeTableInput)
 	if err != nil {
 		return err
 	}
@@ -121,7 +119,7 @@ func scan(ctx context.Context, c dynamodbiface.DynamoDBAPI, tableName string, fi
 				}
 			}
 
-			return lastPage == false
+			return !lastPage
 		})
 		if err != nil {
 			scanResults <- scanResult{
@@ -154,13 +152,11 @@ func batch(ctx context.Context, batchSize int, scanResults <-chan scanResult) <-
 					}
 					return
 				}
-				if ok == false {
-					// channel has been closed, emit and close the batchResults channel
+				if !ok {
 					if len(b) > 0 {
 						batchResults <- batchResult{
 							value: clone(b),
 						}
-						b = b[:0]
 					}
 					return
 				}
@@ -174,7 +170,6 @@ func batch(ctx context.Context, batchSize int, scanResults <-chan scanResult) <-
 				}
 			case <-ctx.Done():
 				return
-			default:
 			}
 		}
 	}(scanResults)

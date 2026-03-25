@@ -21,21 +21,18 @@ func (f SQSMock) DeleteMessageBatch(*sqs.DeleteMessageBatchInput) (*sqs.DeleteMe
 	return nil, nil
 }
 
-func TestNewFlowDynamoDBClient(t *testing.T) {
+func TestNewSQSClient(t *testing.T) {
 	t.Run("Should create client", func(t *testing.T) {
-		client, err := NewSQSClient(SQSMock{})
-
+		client := NewSQSClient(SQSMock{})
 		assert.NotNil(t, client)
-		assert.Nil(t, err)
 	})
 }
 
 func Test_flowSQSClient_Delete(t *testing.T) {
 	t.Run("Should delete message", func(t *testing.T) {
-		client, err := NewSQSClient(SQSMock{})
-		assert.Nil(t, err)
+		client := NewSQSClient(SQSMock{})
 
-		err = client.Delete(context.Background(), "test-queue-name", []string{"test"})
+		err := client.Delete(context.Background(), "test-queue-name", []string{"test"})
 
 		assert.Nil(t, err)
 	})

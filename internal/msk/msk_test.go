@@ -4,7 +4,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/kafka"
 	"github.com/aws/aws-sdk-go/service/kafka/kafkaiface"
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -34,9 +33,6 @@ func (kc *kafkaMock) GetBootstrapBrokers(*kafka.GetBootstrapBrokersInput) (*kafk
 }
 
 func TestMskKafka_GetBootstrapBrokers(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	c := New(&kafkaMock{})
 
 	bootstrapBrokers, err := c.GetBootstrapBrokers("test-cluster")
@@ -46,9 +42,6 @@ func TestMskKafka_GetBootstrapBrokers(t *testing.T) {
 }
 
 func TestMskKafka_GetClusterArn(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	c := New(&kafkaMock{})
 
 	arn, err := c.GetClusterArn("test-cluster")

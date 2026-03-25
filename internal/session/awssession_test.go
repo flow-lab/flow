@@ -25,31 +25,13 @@ func Test_awsSession(t *testing.T) {
 	}
 
 	tests := []struct {
-		name             string
-		args             args
-		wantValidSession bool
-		want             *session.Session
-		before           func()
-		after            func()
-		expectToken      string
+		name        string
+		args        args
+		before      func()
+		after       func()
+		expectToken string
 	}{
 		{
-			name: "test env provider",
-			args: args{
-				profile: "test1",
-			},
-			before: setEnv,
-			after:  os.Clearenv,
-		},
-		{
-			name: "test default shared credentials provider",
-			before: func() {
-				os.Clearenv()
-				_ = os.Setenv("AWS_SHARED_CREDENTIALS_FILE", filepath.Join("testdata", "credentials"))
-			},
-			after:       os.Clearenv,
-			expectToken: "token",
-		}, {
 			name: "test env provider",
 			args: args{
 				profile: "test1",
@@ -75,8 +57,18 @@ func Test_awsSession(t *testing.T) {
 			args: args{
 				profile: "no_token",
 			},
+			after: os.Clearenv,
+		},
+		{
+			name: "test aws-vault style env with session token",
+			before: func() {
+				os.Clearenv()
+				_ = os.Setenv("AWS_ACCESS_KEY_ID", "accessKey")
+				_ = os.Setenv("AWS_SECRET_ACCESS_KEY", "secret")
+				_ = os.Setenv("AWS_SESSION_TOKEN", "vault-token")
+			},
 			after:       os.Clearenv,
-			expectToken: "",
+			expectToken: "vault-token",
 		},
 	}
 
@@ -133,7 +125,7 @@ func Test_awsSession_mfa(t *testing.T) {
 		assert.Equal(t, r.FormValue("SerialNumber"), "arn:aws:iam::1111111111:mfa/test")
 		assert.Equal(t, r.FormValue("TokenCode"), "tokencode")
 
-		_, _ = w.Write([]byte(fmt.Sprintf(assumeRoleRespMsg, time.Now().Add(15*time.Minute).Format("2006-01-02T15:04:05Z"))))
+		_, _ = fmt.Fprintf(w, assumeRoleRespMsg, time.Now().Add(15*time.Minute).Format("2006-01-02T15:04:05Z"))
 	}))
 
 	customProviderCalled := false

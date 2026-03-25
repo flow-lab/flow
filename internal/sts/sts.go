@@ -7,8 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 )
 
-// AssumeRole in aws account and return credentials when assume worked as expected
-func AssumeRole(ctx context.Context, stsapi stsiface.STSAPI, durationSeconds int64, roleSessionName string, roleArn string, serialNr string, tokenCode string) (error, *sts.Credentials) {
+func AssumeRole(ctx context.Context, stsapi stsiface.STSAPI, durationSeconds int64, roleSessionName string, roleArn string, serialNr string, tokenCode string) (*sts.Credentials, error) {
 	input := sts.AssumeRoleInput{
 		DurationSeconds: aws.Int64(durationSeconds),
 		RoleSessionName: aws.String(roleSessionName),
@@ -25,14 +24,13 @@ func AssumeRole(ctx context.Context, stsapi stsiface.STSAPI, durationSeconds int
 
 	res, err := stsapi.AssumeRoleWithContext(ctx, &input)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
-	return nil, res.Credentials
+	return res.Credentials, nil
 }
 
-// GetSessionToken in aws account and return credentials
-func GetSessionToken(ctx context.Context, stsapi stsiface.STSAPI, durationSeconds int64, serialNr string, tokenCode string) (error, *sts.Credentials) {
+func GetSessionToken(ctx context.Context, stsapi stsiface.STSAPI, durationSeconds int64, serialNr string, tokenCode string) (*sts.Credentials, error) {
 	input := sts.GetSessionTokenInput{
 		DurationSeconds: aws.Int64(durationSeconds),
 	}
@@ -47,8 +45,8 @@ func GetSessionToken(ctx context.Context, stsapi stsiface.STSAPI, durationSecond
 
 	res, err := stsapi.GetSessionTokenWithContext(ctx, &input)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
-	return nil, res.Credentials
+	return res.Credentials, nil
 }

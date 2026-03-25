@@ -3,34 +3,23 @@ package logs
 import (
 	"context"
 	"encoding/csv"
+	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs/cloudwatchlogsiface"
-	"github.com/pkg/errors"
-	"log"
 	"strconv"
 	"time"
 )
 
-// SetRetention sets retention for CloudWatch log group
-// retentionDays - the number of days to retain the log events in the specified log group. Possible
-// values are: 1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731,
-// 1827, and 3653.
 func SetRetention(logGroupName string, retentionDays int64, c cloudwatchlogsiface.CloudWatchLogsAPI) error {
 	input := &cloudwatchlogs.PutRetentionPolicyInput{
 		LogGroupName:    &logGroupName,
 		RetentionInDays: aws.Int64(retentionDays),
 	}
-
 	_, err := c.PutRetentionPolicy(input)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
-// Describe returns details for log groups
 func Describe(ctx context.Context, logGroupNamePrefix *string, c cloudwatchlogsiface.CloudWatchLogsAPI) ([]*cloudwatchlogs.LogGroup, error) {
 	input := &cloudwatchlogs.DescribeLogGroupsInput{}
 
@@ -39,10 +28,8 @@ func Describe(ctx context.Context, logGroupNamePrefix *string, c cloudwatchlogsi
 	}
 	var logGroups []*cloudwatchlogs.LogGroup
 	err := c.DescribeLogGroupsPagesWithContext(ctx, input, func(output *cloudwatchlogs.DescribeLogGroupsOutput, lastPage bool) bool {
-		for _, lg := range output.LogGroups {
-			logGroups = append(logGroups, lg)
-		}
-		return lastPage == false
+		logGroups = append(logGroups, output.LogGroups...)
+		return !lastPage
 	})
 	if err != nil {
 		return nil, err
@@ -52,18 +39,12 @@ func Describe(ctx context.Context, logGroupNamePrefix *string, c cloudwatchlogsi
 }
 
 type LogGroupSummary struct {
-	// The log groups.
-	LogGroups []*cloudwatchlogs.LogGroup
-
-	// The number of gigabytes stored.
-	StoredGigaBytes *int64
-	// The number of gigabytes stored.
-	StoredMegaBytes *int64
-	// The number of terabytes stored.
-	StoredTeraBytes *int64
+	LogGroups       []*cloudwatchlogs.LogGroup
+	StoredGigaBytes int64
+	StoredMegaBytes int64
+	StoredTeraBytes int64
 }
 
-// Summary sums up stored bytes and converts them to GB
 func Summary(logGroups []*cloudwatchlogs.LogGroup) *LogGroupSummary {
 	storedBytes := int64(0)
 	for _, lg := range logGroups {
@@ -81,9 +62,9 @@ func Summary(logGroups []*cloudwatchlogs.LogGroup) *LogGroupSummary {
 
 	return &LogGroupSummary{
 		LogGroups:       logGroups,
-		StoredMegaBytes: &storedMegaBytes,
-		StoredGigaBytes: &storedGigaBytes,
-		StoredTeraBytes: &storedTeraBytes,
+		StoredMegaBytes: storedMegaBytes,
+		StoredGigaBytes: storedGigaBytes,
+		StoredTeraBytes: storedTeraBytes,
 	}
 }
 
@@ -101,13 +82,11 @@ func WriteLogEvents(ctx context.Context, logGroupName string, startTime, endTime
 	}
 	var logStreams []*cloudwatchlogs.LogStream
 	err := c.DescribeLogStreamsPagesWithContext(ctx, &describeLogStreamsInput, func(output *cloudwatchlogs.DescribeLogStreamsOutput, lastPage bool) bool {
-		for _, ls := range output.LogStreams {
-			logStreams = append(logStreams, ls)
-		}
-		return lastPage == false
+		logStreams = append(logStreams, output.LogStreams...)
+		return !lastPage
 	})
 	if err != nil {
-		return errors.Wrap(err, "failed to describe log streams")
+		return fmt.Errorf("failed to describe log streams: %w", err)
 	}
 
 	for _, logStream := range logStreams {
@@ -118,32 +97,21 @@ func WriteLogEvents(ctx context.Context, logGroupName string, startTime, endTime
 			StartTime:     aws.Int64(startTime.UnixNano() / int64(time.Millisecond)),
 			EndTime:       aws.Int64(endTime.UnixNano() / int64(time.Millisecond)),
 		}
-		var logEvents []*LogEvent
 		err := c.GetLogEventsPagesWithContext(ctx, input, func(output *cloudwatchlogs.GetLogEventsOutput, lastPage bool) bool {
 			for _, le := range output.Events {
 				print(".")
-				event := LogEvent{
-					Timestamp:     le.Timestamp,
-					Message:       le.Message,
-					LogStreamName: logStream.LogStreamName,
-				}
-				logEvents = append(logEvents, &event)
-			}
-
-			for _, le := range logEvents {
-				if err := writer.Write([]string{strconv.FormatInt(*le.Timestamp, 10), *le.Message, *le.LogStreamName}); err != nil {
-					// not much we can do here unfortunately
-					log.Fatalf("failed to write to csv: %v", err)
+				if err := writer.Write([]string{strconv.FormatInt(*le.Timestamp, 10), *le.Message, *logStream.LogStreamName}); err != nil {
+					fmt.Printf("failed to write to csv: %v\n", err)
+					return false
 				}
 			}
 			writer.Flush()
-			logEvents = nil
-			return lastPage == false
+			return !lastPage
 		})
 		if err != nil {
 			return err
 		}
 	}
 
-	return err
+	return nil
 }

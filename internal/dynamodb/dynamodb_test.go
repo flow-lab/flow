@@ -18,7 +18,7 @@ type dynamoDBMock struct {
 }
 
 func (d *dynamoDBMock) ScanPages(input *dynamodb.ScanInput, callback func(*dynamodb.ScanOutput, bool) bool) error {
-	for i := 0; i < nrOfResults; i++ {
+	for i := range nrOfResults {
 		output := dynamodb.ScanOutput{
 			Items: []map[string]*dynamodb.AttributeValue{
 				{
@@ -73,19 +73,17 @@ func (d *dynamoDBErrorMock) DescribeTableWithContext(aws.Context, *dynamodb.Desc
 
 func TestFlowDynamoDBClient_Delete(t *testing.T) {
 	t.Run("Should delete - happy path", func(t *testing.T) {
-		c, err := NewFlowDynamoDBClient(&dynamoDBMock{})
-		assert.Nil(t, err)
+		c := NewFlowDynamoDBClient(&dynamoDBMock{})
 
-		err = c.Delete(context.TODO(), "test", nil, nil)
+		err := c.Delete(context.TODO(), "test", nil, nil)
 
 		assert.Nil(t, err)
 	})
 
 	t.Run("Should stop - not so happy path", func(t *testing.T) {
-		c, err := NewFlowDynamoDBClient(&dynamoDBErrorMock{})
-		assert.Nil(t, err)
+		c := NewFlowDynamoDBClient(&dynamoDBErrorMock{})
 
-		err = c.Delete(context.TODO(), "test", nil, nil)
+		err := c.Delete(context.TODO(), "test", nil, nil)
 
 		assert.NotNil(t, err)
 	})
@@ -155,7 +153,7 @@ func TestBatchDelete(t *testing.T) {
 		c := dynamoDBErrorMock{}
 
 		ctx := context.TODO()
-		batchResults := make(chan batchResult, 0)
+		batchResults := make(chan batchResult)
 		scanResults := batchDelete(ctx, &c, "test", batchResults)
 
 		batchResults <- batchResult{
@@ -187,7 +185,7 @@ func TestBatch(t *testing.T) {
 		}
 
 		go func() {
-			for i := 0; i < 60; i++ {
+			for range 60 {
 				scanResults <- scanResult
 			}
 			close(scanResults)

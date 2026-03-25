@@ -10,15 +10,12 @@ import (
 	"strings"
 )
 
-// FlowSQSClient is a client for interacting with SQS API and wraps the standard client.
 type FlowSQSClient interface {
 	Delete(ctx context.Context, queueName string, receiptHandles []string) error
 }
 
-// NewSQSClient creates a new flow sqs client.
-func NewSQSClient(d sqsiface.SQSAPI) (FlowSQSClient, error) {
-	client := flowSQSClient{d}
-	return &client, nil
+func NewSQSClient(d sqsiface.SQSAPI) FlowSQSClient {
+	return &flowSQSClient{d}
 }
 
 type flowSQSClient struct {
@@ -26,7 +23,7 @@ type flowSQSClient struct {
 }
 
 func (f flowSQSClient) Delete(ctx context.Context, queueName string, receiptHandles []string) error {
-	err, qUrl := f.resolveSQSURL(ctx, queueName)
+	qUrl, err := f.resolveSQSURL(ctx, queueName)
 	if err != nil {
 		return err
 	}
@@ -48,10 +45,10 @@ func (f flowSQSClient) Delete(ctx context.Context, queueName string, receiptHand
 	return err
 }
 
-func (f flowSQSClient) resolveSQSURL(ctx context.Context, queueName string) (error, string) {
+func (f flowSQSClient) resolveSQSURL(ctx context.Context, queueName string) (string, error) {
 	resp, err := f.ListQueues(&sqs.ListQueuesInput{})
 	if err != nil {
-		return err, ""
+		return "", err
 	}
 
 	for _, elem := range resp.QueueUrls {
@@ -59,9 +56,9 @@ func (f flowSQSClient) resolveSQSURL(ctx context.Context, queueName string) (err
 		split := strings.Split(qUrl, "/")
 		qName := split[len(split)-1]
 		if strings.EqualFold(qName, queueName) {
-			return nil, qUrl
+			return qUrl, nil
 		}
 	}
 
-	return errors.New("sqs url not found"), ""
+	return "", errors.New("sqs url not found")
 }
