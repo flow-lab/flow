@@ -133,9 +133,9 @@ func Test_awsSession_mfa(t *testing.T) {
 	options := &session.Options{
 		Profile: "cloudformation@flowlab-dev",
 		Config: aws.Config{
-			Region:     aws.String("eu-west-1"),
-			Endpoint:   aws.String(server.URL),
-			DisableSSL: aws.Bool(true),
+			Region:     new("eu-west-1"),
+			Endpoint:   new(server.URL),
+			DisableSSL: new(true),
 		},
 		SharedConfigState: session.SharedConfigEnable,
 		AssumeRoleTokenProvider: func() (string, error) {

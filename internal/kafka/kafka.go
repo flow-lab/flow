@@ -66,11 +66,9 @@ func NewFlowKafka(c *ServiceConfig) (FlowKafka, error) {
 	sConfig.Producer.Return.Errors = true
 
 	ser := &saramaService{
-		config: config{
-			saramaConfig:    sConfig,
-			producer:        c.producer,
-			bootstrapBroker: c.BootstrapBroker,
-		},
+		saramaConfig:    sConfig,
+		producer:        c.producer,
+		bootstrapBroker: c.BootstrapBroker,
 	}
 
 	if c.clusterAdmin == nil {

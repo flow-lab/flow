@@ -7,7 +7,7 @@ NOTE: Flow CLI is under development, and may occasionally make backwards-incompa
 
 ## Requirements
 
-- Go 1.26+
+- Go 1.27+
 
 ## Installation
 
