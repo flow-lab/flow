@@ -19,9 +19,9 @@ type stsMock struct {
 func (m *stsMock) AssumeRoleWithContext(_ aws.Context, input *sts.AssumeRoleInput, _ ...request.Option) (*sts.AssumeRoleOutput, error) {
 	return &sts.AssumeRoleOutput{
 		Credentials: &sts.Credentials{
-			AccessKeyId:     aws.String("AKID"),
-			SecretAccessKey: aws.String("SECRET"),
-			SessionToken:    aws.String("TOKEN"),
+			AccessKeyId:     new("AKID"),
+			SecretAccessKey: new("SECRET"),
+			SessionToken:    new("TOKEN"),
 		},
 	}, nil
 }
@@ -29,9 +29,9 @@ func (m *stsMock) AssumeRoleWithContext(_ aws.Context, input *sts.AssumeRoleInpu
 func (m *stsMock) GetSessionTokenWithContext(_ aws.Context, input *sts.GetSessionTokenInput, _ ...request.Option) (*sts.GetSessionTokenOutput, error) {
 	return &sts.GetSessionTokenOutput{
 		Credentials: &sts.Credentials{
-			AccessKeyId:     aws.String("AKID"),
-			SecretAccessKey: aws.String("SECRET"),
-			SessionToken:    aws.String("TOKEN"),
+			AccessKeyId:     new("AKID"),
+			SecretAccessKey: new("SECRET"),
+			SessionToken:    new("TOKEN"),
 		},
 	}, nil
 }

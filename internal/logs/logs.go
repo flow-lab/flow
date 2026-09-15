@@ -14,7 +14,7 @@ import (
 func SetRetention(logGroupName string, retentionDays int64, c cloudwatchlogsiface.CloudWatchLogsAPI) error {
 	input := &cloudwatchlogs.PutRetentionPolicyInput{
 		LogGroupName:    &logGroupName,
-		RetentionInDays: aws.Int64(retentionDays),
+		RetentionInDays: new(retentionDays),
 	}
 	_, err := c.PutRetentionPolicy(input)
 	return err
@@ -77,7 +77,7 @@ type LogEvent struct {
 func WriteLogEvents(ctx context.Context, logGroupName string, startTime, endTime time.Time, c cloudwatchlogsiface.CloudWatchLogsAPI, writer *csv.Writer) error {
 	describeLogStreamsInput := cloudwatchlogs.DescribeLogStreamsInput{
 		LogGroupName: &logGroupName,
-		Descending:   aws.Bool(true),
+		Descending:   new(true),
 		OrderBy:      aws.String(cloudwatchlogs.OrderByLastEventTime),
 	}
 	var logStreams []*cloudwatchlogs.LogStream
@@ -93,9 +93,9 @@ func WriteLogEvents(ctx context.Context, logGroupName string, startTime, endTime
 		input := &cloudwatchlogs.GetLogEventsInput{
 			LogGroupName:  &logGroupName,
 			LogStreamName: logStream.LogStreamName,
-			StartFromHead: aws.Bool(true),
-			StartTime:     aws.Int64(startTime.UnixNano() / int64(time.Millisecond)),
-			EndTime:       aws.Int64(endTime.UnixNano() / int64(time.Millisecond)),
+			StartFromHead: new(true),
+			StartTime:     new(startTime.UnixNano() / int64(time.Millisecond)),
+			EndTime:       new(endTime.UnixNano() / int64(time.Millisecond)),
 		}
 		err := c.GetLogEventsPagesWithContext(ctx, input, func(output *cloudwatchlogs.GetLogEventsOutput, lastPage bool) bool {
 			for _, le := range output.Events {

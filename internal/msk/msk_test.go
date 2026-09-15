@@ -1,7 +1,6 @@
 package msk
 
 import (
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/kafka"
 	"github.com/aws/aws-sdk-go/service/kafka/kafkaiface"
 	"github.com/stretchr/testify/assert"
@@ -18,8 +17,8 @@ func (kc *kafkaMock) ListClusters(*kafka.ListClustersInput) (*kafka.ListClusters
 	return &kafka.ListClustersOutput{
 		ClusterInfoList: []*kafka.ClusterInfo{
 			{
-				ClusterArn:  aws.String("test-arn"),
-				ClusterName: aws.String("test-cluster"),
+				ClusterArn:  new("test-arn"),
+				ClusterName: new("test-cluster"),
 			},
 		},
 		NextToken: nil,
@@ -28,7 +27,7 @@ func (kc *kafkaMock) ListClusters(*kafka.ListClustersInput) (*kafka.ListClusters
 
 func (kc *kafkaMock) GetBootstrapBrokers(*kafka.GetBootstrapBrokersInput) (*kafka.GetBootstrapBrokersOutput, error) {
 	return &kafka.GetBootstrapBrokersOutput{
-		BootstrapBrokerString: aws.String("localhost:9092,localhost:9093"),
+		BootstrapBrokerString: new("localhost:9092,localhost:9093"),
 	}, nil
 }
 

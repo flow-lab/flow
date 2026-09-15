@@ -2,7 +2,6 @@ package sqs
 
 import (
 	"context"
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
 	"github.com/stretchr/testify/assert"
@@ -14,7 +13,7 @@ type SQSMock struct {
 }
 
 func (f SQSMock) ListQueues(*sqs.ListQueuesInput) (*sqs.ListQueuesOutput, error) {
-	return &sqs.ListQueuesOutput{QueueUrls: []*string{aws.String("	https://sqs.eu-west-1.amazonaws.com/111111111111/test-queue-name")}}, nil
+	return &sqs.ListQueuesOutput{QueueUrls: []*string{new("	https://sqs.eu-west-1.amazonaws.com/111111111111/test-queue-name")}}, nil
 }
 
 func (f SQSMock) DeleteMessageBatch(*sqs.DeleteMessageBatchInput) (*sqs.DeleteMessageBatchOutput, error) {

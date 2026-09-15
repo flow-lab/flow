@@ -23,7 +23,7 @@ func (d *dynamoDBMock) ScanPages(input *dynamodb.ScanInput, callback func(*dynam
 			Items: []map[string]*dynamodb.AttributeValue{
 				{
 					"id": &dynamodb.AttributeValue{
-						S: aws.String(fmt.Sprintf("%d", i)),
+						S: new(fmt.Sprintf("%d", i)),
 					},
 				},
 			},
@@ -42,8 +42,8 @@ func (d *dynamoDBMock) DescribeTableWithContext(aws.Context, *dynamodb.DescribeT
 		Table: &dynamodb.TableDescription{
 			KeySchema: []*dynamodb.KeySchemaElement{
 				{
-					AttributeName: aws.String("id"),
-					KeyType:       aws.String("S"),
+					AttributeName: new("id"),
+					KeyType:       new("S"),
 				},
 			},
 		},
@@ -63,8 +63,8 @@ func (d *dynamoDBErrorMock) DescribeTableWithContext(aws.Context, *dynamodb.Desc
 		Table: &dynamodb.TableDescription{
 			KeySchema: []*dynamodb.KeySchemaElement{
 				{
-					AttributeName: aws.String("id"),
-					KeyType:       aws.String("S"),
+					AttributeName: new("id"),
+					KeyType:       new("S"),
 				},
 			},
 		},
@@ -94,7 +94,7 @@ func TestScan(t *testing.T) {
 		c := dynamoDBMock{}
 
 		ctx := context.TODO()
-		scanResults := scan(ctx, &c, "test", aws.String("test"), nil, nil, nil, 10)
+		scanResults := scan(ctx, &c, "test", new("test"), nil, nil, nil, 10)
 		counter := 0
 		for elem := range scanResults {
 			assert.NotNil(t, elem.value)
@@ -130,7 +130,7 @@ func TestBatchDelete(t *testing.T) {
 		var m []map[string]*dynamodb.AttributeValue
 		m = append(m, map[string]*dynamodb.AttributeValue{
 			"id": {
-				S: aws.String("1"),
+				S: new("1"),
 			},
 		})
 		batchResults <- batchResult{
@@ -179,7 +179,7 @@ func TestBatch(t *testing.T) {
 		scanResult := scanResult{
 			value: map[string]*dynamodb.AttributeValue{
 				"id": {
-					S: aws.String("1"),
+					S: new("1"),
 				},
 			},
 		}
@@ -224,17 +224,17 @@ func TestClone(t *testing.T) {
 		src := []map[string]*dynamodb.AttributeValue{
 			{
 				"id": &dynamodb.AttributeValue{
-					S: aws.String("test0"),
+					S: new("test0"),
 				},
 				"test": &dynamodb.AttributeValue{
-					S: aws.String("test1"),
+					S: new("test1"),
 				},
 			},
 		}
 
 		dst := clone(src)
 
-		src[0]["id"].S = aws.String("test1")
+		src[0]["id"].S = new("test1")
 
 		assert.Equal(t, 1, len(dst))
 		assert.Equal(t, "test0", aws.StringValue(dst[0]["id"].S))
@@ -246,12 +246,12 @@ func TestProjectionExpression(t *testing.T) {
 	t.Run("Should crate projection expression from many keys with expression attribute names", func(t *testing.T) {
 		keySchemas := []*dynamodb.KeySchemaElement{
 			{
-				AttributeName: aws.String("id"),
-				KeyType:       aws.String("S"),
+				AttributeName: new("id"),
+				KeyType:       new("S"),
 			},
 			{
-				AttributeName: aws.String("date"),
-				KeyType:       aws.String("S"),
+				AttributeName: new("date"),
+				KeyType:       new("S"),
 			},
 		}
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
 )
@@ -33,7 +32,7 @@ func NewFlowDynamoDBClient(d dynamodbiface.DynamoDBAPI) FlowDynamoDBClient {
 // and processing will be stopped.
 func (f *flowDynamoDBClient) Delete(ctx context.Context, tableName string, filterExpression *string, expressionAttributeValues *string) error {
 	describeTableInput := dynamodb.DescribeTableInput{
-		TableName: aws.String(tableName),
+		TableName: new(tableName),
 	}
 	describeTableOutput, err := f.DescribeTableWithContext(ctx, &describeTableInput)
 	if err != nil {

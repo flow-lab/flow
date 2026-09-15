@@ -27,8 +27,8 @@ func (c *cloudwatchLogsMock) DescribeLogGroupsPagesWithContext(ctx aws.Context, 
 	output := &cloudwatchlogs.DescribeLogGroupsOutput{
 		LogGroups: []*cloudwatchlogs.LogGroup{
 			{
-				LogGroupName: aws.String("test"),
-				StoredBytes:  aws.Int64(int64(1)),
+				LogGroupName: new("test"),
+				StoredBytes:  new(int64(1)),
 			},
 		},
 	}
@@ -40,7 +40,7 @@ func (c *cloudwatchLogsMock) DescribeLogStreamsPagesWithContext(ctx aws.Context,
 	output := &cloudwatchlogs.DescribeLogStreamsOutput{
 		LogStreams: []*cloudwatchlogs.LogStream{
 			{
-				LogStreamName: aws.String("stream-1"),
+				LogStreamName: new("stream-1"),
 			},
 		},
 	}
@@ -54,7 +54,7 @@ func (c *cloudwatchLogsMock) GetLogEventsPagesWithContext(ctx aws.Context, input
 		Events: []*cloudwatchlogs.OutputLogEvent{
 			{
 				Timestamp: &ts,
-				Message:   aws.String("test message"),
+				Message:   new("test message"),
 			},
 		},
 	}

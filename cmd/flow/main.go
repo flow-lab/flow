@@ -14,6 +14,8 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
+	stsv2 "github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	asession "github.com/aws/aws-sdk-go/aws/session"
@@ -86,7 +88,7 @@ type Secret struct {
 	Name     string
 	Type     string
 	Value    string
-	RSAValue RSAValue `json:"rsaValue,omitempty"`
+	RSAValue RSAValue `json:"rsaValue"`
 }
 
 type SecretOutput struct {
@@ -207,8 +209,8 @@ func main() {
 										Update: &dynamodb.UpdateGlobalSecondaryIndexAction{
 											IndexName: &indexName,
 											ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
-												ReadCapacityUnits:  aws.Int64(read),
-												WriteCapacityUnits: aws.Int64(write),
+												ReadCapacityUnits:  new(read),
+												WriteCapacityUnits: new(write),
 											},
 										},
 									})
@@ -216,15 +218,15 @@ func main() {
 
 								input = dynamodb.UpdateTableInput{
 									GlobalSecondaryIndexUpdates: gsiu,
-									TableName:                   aws.String(tableName),
+									TableName:                   new(tableName),
 								}
 							} else {
 								input = dynamodb.UpdateTableInput{
 									ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
-										ReadCapacityUnits:  aws.Int64(read),
-										WriteCapacityUnits: aws.Int64(write),
+										ReadCapacityUnits:  new(read),
+										WriteCapacityUnits: new(write),
 									},
-									TableName: aws.String(tableName),
+									TableName: new(tableName),
 								}
 							}
 
@@ -591,7 +593,7 @@ func main() {
 										keyConditionExpression = fmt.Sprintf(" AND %s = :%s", key, key)
 									}
 								}
-								query.KeyConditionExpression = aws.String(keyConditionExpression)
+								query.KeyConditionExpression = new(keyConditionExpression)
 
 								retry := 1
 								for {
@@ -689,7 +691,7 @@ func main() {
 								SourceTableName: &sourceTableName,
 								TargetTableName: &targetTableName,
 								// TODO [grokrz]: parameter ?
-								UseLatestRestorableTime: aws.Bool(true),
+								UseLatestRestorableTime: new(true),
 							}
 
 							result, err := ddbc.RestoreTableToPointInTime(&input)
@@ -1193,8 +1195,8 @@ func main() {
 								for {
 									params := sqs.ReceiveMessageInput{
 										QueueUrl:            queueUrl,
-										MaxNumberOfMessages: aws.Int64(maxNumberOfMessages),
-										AttributeNames:      []*string{aws.String("All")},
+										MaxNumberOfMessages: new(maxNumberOfMessages),
+										AttributeNames:      []*string{new("All")},
 										WaitTimeSeconds:     aws.Int64(20),
 									}
 									resp, err := sqsc.ReceiveMessage(&params)
@@ -1471,7 +1473,7 @@ func main() {
 
 							sess := session.NewSessionWithSharedProfile(profile)
 							reg := c.String("region")
-							sess.Config.Region = aws.String(reg)
+							sess.Config.Region = new(reg)
 
 							cwlc := cloudwatchlogs.New(sess)
 
@@ -1766,7 +1768,7 @@ func main() {
 								for _, elem := range output.Parameters {
 									param := ssm.GetParameterInput{
 										Name:           elem.Name,
-										WithDecryption: aws.Bool(true),
+										WithDecryption: new(true),
 									}
 									out, _ := ssmc.GetParameter(&param)
 
@@ -1822,7 +1824,7 @@ func main() {
 							ssmc := secretsmanager.New(sess)
 
 							getSecretValueInput := secretsmanager.GetSecretValueInput{
-								SecretId: aws.String(secretId),
+								SecretId: new(secretId),
 							}
 							getSecretValueOutput, err := ssmc.GetSecretValue(&getSecretValueInput)
 							if err != nil {
@@ -2015,8 +2017,8 @@ func main() {
 								switch secret.Type {
 								case "value", "password":
 									input = secretsmanager.CreateSecretInput{
-										Name:         aws.String(secret.Name),
-										SecretString: aws.String(secret.Value),
+										Name:         new(secret.Name),
+										SecretString: new(secret.Value),
 									}
 								case "rsa":
 									rsa, err := json.Marshal(secret.RSAValue)
@@ -2024,7 +2026,7 @@ func main() {
 										return err
 									}
 									input = secretsmanager.CreateSecretInput{
-										Name:         aws.String(secret.Name),
+										Name:         new(secret.Name),
 										SecretBinary: rsa,
 									}
 								default:
@@ -2079,8 +2081,8 @@ func main() {
 								switch secret.Type {
 								case "value", "password":
 									input = secretsmanager.UpdateSecretInput{
-										SecretId:     aws.String(secret.Name),
-										SecretString: aws.String(secret.Value),
+										SecretId:     new(secret.Name),
+										SecretString: new(secret.Value),
 									}
 								case "rsa":
 									rsa, err := json.Marshal(secret.RSAValue)
@@ -2088,7 +2090,7 @@ func main() {
 										return err
 									}
 									input = secretsmanager.UpdateSecretInput{
-										SecretId:     aws.String(secret.Name),
+										SecretId:     new(secret.Name),
 										SecretBinary: rsa,
 									}
 								default:
@@ -2141,7 +2143,7 @@ func main() {
 							kinesisc := kinesis.New(sess)
 							updateShardCountInput := kinesis.UpdateShardCountInput{
 								StreamName:       &streamName,
-								TargetShardCount: aws.Int64(count),
+								TargetShardCount: new(count),
 								ScalingType:      aws.String(kinesis.ScalingTypeUniformScaling),
 							}
 							_, err = kinesisc.UpdateShardCount(&updateShardCountInput)
@@ -2259,7 +2261,7 @@ func main() {
 							s3c := s3.New(sess)
 
 							input := s3.ListObjectVersionsInput{
-								Bucket: aws.String(bucketName),
+								Bucket: new(bucketName),
 							}
 							err := s3c.ListObjectVersionsPages(&input, func(output *s3.ListObjectVersionsOutput, b bool) bool {
 								var objectIdentifiers []*s3.ObjectIdentifier
@@ -2372,12 +2374,12 @@ func main() {
 
 									for _, deployment := range getStagesOutput.Item {
 										exportInput := apigateway.GetExportInput{
-											Accepts:    aws.String(fmt.Sprintf("application/%s", fileType)),
+											Accepts:    new(fmt.Sprintf("application/%s", fileType)),
 											RestApiId:  restAPI.Id,
 											StageName:  deployment.StageName,
-											ExportType: aws.String(exportType),
+											ExportType: new(exportType),
 											Parameters: map[string]*string{
-												"extensions": aws.String("documentation"),
+												"extensions": new("documentation"),
 											},
 										}
 										getExportOutput, err := apig.GetExport(&exportInput)
@@ -3398,7 +3400,7 @@ func main() {
 
 							// new session with assumed role
 							eksc := eks.New(sess)
-							cres, err := eksc.DescribeClusterWithContext(context.Background(), &eks.DescribeClusterInput{Name: aws.String(cluster)})
+							cres, err := eksc.DescribeClusterWithContext(context.Background(), &eks.DescribeClusterInput{Name: new(cluster)})
 							if err != nil {
 								return errors.Wrapf(err, "describe cluster %s", cluster)
 							}
@@ -3687,7 +3689,7 @@ func main() {
 							writer := bufio.NewWriter(buf)
 							defer func() { _ = writer.Flush() }()
 
-							var objs []interface{}
+							var objs []any
 							if err := decoder.Decode(&objs); err != nil {
 								return errors.Wrap(err, "decode json")
 							}
@@ -3860,7 +3862,7 @@ func main() {
 
 							kid := sha256.Sum256(pubKeyBytes)
 
-							jwk := map[string]interface{}{
+							jwk := map[string]any{
 								"kty": "RSA",
 								"n":   base64.RawURLEncoding.EncodeToString(publicKey.N.Bytes()),
 								"e":   base64.RawURLEncoding.EncodeToString(big.NewInt(int64(publicKey.E)).Bytes()),
@@ -3869,7 +3871,7 @@ func main() {
 								"use": "sig",
 							}
 
-							var keys []map[string]interface{}
+							var keys []map[string]any
 							keys = append(keys, jwk)
 
 							jwkKeysJson, err := json.Marshal(keys)
@@ -3938,11 +3940,11 @@ func newClientset(cluster *eks.Cluster, sess *asession.Session) (*kubernetes.Cli
 	if err != nil {
 		return nil, err
 	}
-	opts := &token.GetTokenOptions{
-		ClusterID: aws.StringValue(cluster.Name),
-		Session:   sess,
-	}
-	tok, err := gen.GetWithOptions(opts)
+	stsClient := stsv2.New(stsv2.Options{
+		Region:      aws.StringValue(sess.Config.Region),
+		Credentials: credentialsProviderFromSession(sess),
+	})
+	tok, err := gen.GetWithSTS(aws.StringValue(cluster.Name), stsClient)
 	if err != nil {
 		return nil, err
 	}
@@ -3956,11 +3958,24 @@ func newClientset(cluster *eks.Cluster, sess *asession.Session) (*kubernetes.Cli
 		&rest.Config{
 			Host:        aws.StringValue(cluster.Endpoint),
 			BearerToken: tok.Token,
-			TLSClientConfig: rest.TLSClientConfig{
-				CAData: ca,
-			},
+			CAData:      ca,
 		},
 	)
+}
+
+func credentialsProviderFromSession(sess *asession.Session) awsv2.CredentialsProvider {
+	return awsv2.CredentialsProviderFunc(func(ctx context.Context) (awsv2.Credentials, error) {
+		v, err := sess.Config.Credentials.GetWithContext(ctx)
+		if err != nil {
+			return awsv2.Credentials{}, err
+		}
+		return awsv2.Credentials{
+			AccessKeyID:     v.AccessKeyID,
+			SecretAccessKey: v.SecretAccessKey,
+			SessionToken:    v.SessionToken,
+			Source:          v.ProviderName,
+		}, nil
+	})
 }
 
 func NewGitHubClient(org string, accessToken string) (*github.Client, error) {
