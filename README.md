@@ -14,7 +14,7 @@ NOTE: Flow CLI is under development, and may occasionally make backwards-incompa
 * [homebrew](https://github.com/flow-lab/homebrew-tap)
 
     ```sh
-    brew install flow-lab/tap/flow
+    brew install --cask flow-lab/tap/flow
     ```
 
 * latest version from github releases
