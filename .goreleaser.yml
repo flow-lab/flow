@@ -31,14 +31,17 @@ archives:
         formats:
           - zip
 
-brews:
+homebrew_casks:
   - name: flow
     repository:
       owner: flow-lab
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-    directory: Formula
     homepage: "https://www.flowlab.no/"
     description: "AWS tooling for faster development."
-    test: |
-      system "#{bin}/flow --version"
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/flow"]
+          end
