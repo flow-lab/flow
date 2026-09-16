@@ -15,3 +15,5 @@
 
 *.pem
 jwk.json
+
+dist/
