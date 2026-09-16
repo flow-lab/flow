@@ -36,6 +36,9 @@ brews:
     repository:
       owner: flow-lab
       name: homebrew-tap
+      git:
+        url: "git@github.com:flow-lab/homebrew-tap.git"
+        private_key: "{{ .Env.HOMEBREW_TAP_SSH_KEY }}"
     directory: Formula
     homepage: "https://www.flowlab.no/"
     description: "AWS tooling for faster development."
