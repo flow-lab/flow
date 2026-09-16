@@ -1,44 +1,42 @@
-env:
-  - GO111MODULE=on
+version: 2
 
 builds:
   - binary: flow
     main: ./cmd/flow/main.go
     env:
       - CGO_ENABLED=0
-      - GO111MODULE=on
     goos:
       - linux
       - darwin
       - windows
     goarch:
-      - 386
+      - "386"
       - amd64
       - arm64
+
 before:
   hooks:
     - make deps
     - make test
 
 archives:
-  - name_template: '{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
-    replacements:
-      darwin: Darwin
-      linux: Linux
-      windows: Windows
-      386: i386
-      amd64: x86_64
-      arm64: aarch64
+  - name_template: >-
+      {{ .ProjectName }}_{{ title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else if eq .Arch "arm64" }}aarch64
+      {{- else }}{{ .Arch }}{{ end }}
     format_overrides:
       - goos: windows
-        format: zip
+        formats:
+          - zip
 
 brews:
   - name: flow
-    tap:
+    repository:
       owner: flow-lab
-      name: flow-tap
-    folder: Formula
+      name: homebrew-tap
+    directory: Formula
     homepage: "https://www.flowlab.no/"
     description: "AWS tooling for faster development."
     test: |
